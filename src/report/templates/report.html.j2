@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Analysis report — {{ original_filename }}</title>
+<style>
+  body { font-family: sans-serif; margin: 2.5cm; color: #1a1a1a; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; margin-top: 1.5em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  .meta { color: #666; font-size: 12px; }
+  .red-flag { margin-bottom: 0.8em; padding: 0.6em; border-left: 4px solid #999; }
+  .red-flag.high { border-color: #c0392b; }
+  .red-flag.medium { border-color: #d68910; }
+  .red-flag.low { border-color: #7f8c8d; }
+  .red-flag .title { font-weight: bold; }
+  .red-flag .severity { text-transform: uppercase; font-size: 10px; color: #666; }
+</style>
+</head>
+<body>
+  <h1>Analysis report</h1>
+  <p class="meta">Source file: {{ original_filename }} — Detected context: {{ analysis.detected_context }}</p>
+
+  <h2>Summary</h2>
+  <p>{{ analysis.summary }}</p>
+
+  <h2>Explanation</h2>
+  <p>{{ analysis.plain_explanation }}</p>
+
+  <h2>Things to pay attention to</h2>
+  {% if analysis.red_flags %}
+    {% for flag in analysis.red_flags %}
+    <div class="red-flag {{ flag.severity }}">
+      <div class="title">{{ flag.title }}</div>
+      <div class="severity">{{ flag.severity }}</div>
+      <div>{{ flag.description }}</div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p>No notable red flags found.</p>
+  {% endif %}
+</body>
+</html>
