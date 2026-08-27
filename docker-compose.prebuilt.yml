@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/OWNER/file-analyzer:latest
+    image: ghcr.io/lucaalex00/file_analyzer:latest
     build: !reset null
     command: !reset null
     volumes: !reset []
