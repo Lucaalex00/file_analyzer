@@ -18,5 +18,11 @@ concerning clauses, deadlines, unusual requests, or risks a non-expert should no
 - return an empty list if there are none. Respond with JSON only, no other text."""
 
 
+# Hard cap on document text sent to the LLM. An accepted upload can be up to
+# MAX_FILE_SIZE_BYTES (10MB by default), far past any realistic context window;
+# a plain truncation is enough for this MVP.
+MAX_DOCUMENT_CHARS = 80_000
+
+
 def build_user_prompt(document_text: str) -> str:
-    return f"Analyze the following document:\n\n{document_text}"
+    return f"Analyze the following document:\n\n{document_text[:MAX_DOCUMENT_CHARS]}"

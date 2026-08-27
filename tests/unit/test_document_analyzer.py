@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.analyzer.document_analyzer import AnalysisError, DocumentAnalyzer
+from src.analyzer.prompts import MAX_DOCUMENT_CHARS, build_user_prompt
 from src.extractors.base import RawText
 
 VALID_RESPONSE_JSON = json.dumps(
@@ -35,6 +36,18 @@ def make_client(response_content: str | None = None, raise_exc: Exception | None
         completion.choices = [choice]
         client.chat.completions.create.return_value = completion
     return client
+
+
+class TestBuildUserPrompt:
+    def test_truncates_over_long_documents(self):
+        prompt = build_user_prompt("x" * (MAX_DOCUMENT_CHARS + 5_000))
+
+        assert prompt.count("x") == MAX_DOCUMENT_CHARS
+
+    def test_keeps_short_documents_intact(self):
+        prompt = build_user_prompt("short document")
+
+        assert prompt.endswith("short document")
 
 
 class TestAnalyze:

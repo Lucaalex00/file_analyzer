@@ -22,8 +22,14 @@ async def analyze(
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
 ) -> Response:
     settings = get_settings()
+
+    # Fast path: reject oversized uploads before buffering the whole body.
+    if file.size is not None and file.size > settings.max_file_size_bytes:
+        raise HTTPException(status_code=413, detail="File exceeds the maximum allowed size")
+
     file_bytes = await file.read()
 
+    # Fallback for clients/servers that don't populate .size.
     if len(file_bytes) > settings.max_file_size_bytes:
         raise HTTPException(status_code=413, detail="File exceeds the maximum allowed size")
 

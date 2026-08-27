@@ -20,6 +20,31 @@ def test_generate_returns_non_empty_pdf_bytes():
     assert len(pdf_bytes) > 500
 
 
+def test_render_html_escapes_llm_supplied_markup():
+    analysis = AnalysisResult(
+        detected_context="other",
+        plain_explanation="<script>alert(1)</script>",
+        summary="<img src=x onerror=alert(1)>",
+        red_flags=[
+            RedFlag(
+                title="<style>@import url(http://evil.example/x.css)</style>",
+                description="<iframe src='http://evil.example'></iframe>",
+                severity="low",
+            )
+        ],
+    )
+    generator = ReportGenerator()
+
+    html = generator.render_html(analysis, original_filename="<b>doc</b>.txt")
+
+    assert "<script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "<iframe" not in html
+    assert "<style>@import" not in html
+    assert "<img" not in html
+    assert "<b>doc</b>.txt" not in html
+
+
 def test_generate_handles_no_red_flags():
     analysis = AnalysisResult(
         detected_context="personal",

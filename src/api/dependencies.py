@@ -16,6 +16,10 @@ def get_pipeline() -> DocumentAnalysisPipeline:
         azure_endpoint=settings.azure_openai_endpoint,
         api_key=settings.azure_openai_api_key,
         api_version=settings.azure_openai_api_version,
+        # DocumentAnalyzer owns the retry policy; disable the SDK's own retries
+        # so the two don't compound, and cap the per-request wait.
+        timeout=30.0,
+        max_retries=0,
     )
     return DocumentAnalysisPipeline(
         factory=ExtractorFactory(),
