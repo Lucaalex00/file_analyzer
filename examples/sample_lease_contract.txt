@@ -1,0 +1,18 @@
+RESIDENTIAL LEASE AGREEMENT
+
+This agreement is entered into between Landlord (Acme Properties LLC) and Tenant
+(Jane Doe) for the property located at 12 Elm Street, Apt 4.
+
+Term: 12 months, starting September 1, 2026.
+Monthly rent: 950 EUR, due on the 1st of each month.
+
+Early termination: If the Tenant terminates this lease before the end of the term,
+the Tenant must pay a penalty equal to two (2) months of rent, in addition to
+forfeiting the security deposit.
+
+Automatic renewal: Unless either party provides written notice 60 days before the
+end of the term, this lease automatically renews for another 12 months at a rent
+increase of 8%.
+
+Maintenance: Tenant is responsible for all repairs under 200 EUR, including
+appliance failures not caused by normal wear and tear.

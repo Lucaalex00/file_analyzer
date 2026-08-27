@@ -1,0 +1,14 @@
+Subject: Q4 Deliverable Deadline Moved Up
+
+Team,
+
+Due to a client request, the Q4 deliverable deadline has moved from December 15
+to November 30. Please reprioritize your current tasks accordingly and flag to
+your manager by end of week if this creates a scheduling conflict.
+
+Also, a reminder that the shared credentials for the staging environment must be
+rotated by anyone with access — send your new password to IT directly, not over
+Slack.
+
+Thanks,
+Project Management
