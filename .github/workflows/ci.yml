@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
 
 jobs:
@@ -22,11 +22,11 @@ jobs:
       - name: Lint
         run: ruff check src tests
       - name: Test
-        run: pytest -v
+        run: pytest --cov=src --cov-fail-under=80 -v
 
   docker:
     needs: test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: read

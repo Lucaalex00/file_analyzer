@@ -20,8 +20,13 @@
 
 ## Statelessness
 
-No component writes to disk or a database. Every stage operates on in-memory
-bytes for the lifetime of one HTTP request.
+The application itself writes nothing to disk or to a database: every stage
+operates on in-memory bytes for the lifetime of one HTTP request. Note that for
+uploads over ~1MB, Starlette's `UploadFile` may spool the request body to an OS
+temp file for the duration of the request (standard ASGI behavior), cleaned up
+automatically when the request completes. `POST /analyze` rejects oversized
+uploads from `Content-Length` before reading the body where the client provides
+it, with a post-read size check as a fallback.
 
 ## Testing
 

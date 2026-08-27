@@ -1,6 +1,9 @@
 services:
   api:
     image: ghcr.io/OWNER/file-analyzer:latest
+    build: !reset null
+    command: !reset null
+    volumes: !reset []
     ports:
       - "8000:8000"
     env_file:

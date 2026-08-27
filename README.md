@@ -19,8 +19,9 @@ Try it:
 curl -F "file=@examples/sample_lease_contract.txt" http://localhost:8000/analyze -o report.pdf
 ```
 
-No Azure OpenAI credentials yet? See [`examples/`](examples/) for sample input
-files and their already-generated report PDFs.
+See [`examples/`](examples/) for sample input files. Report PDFs are generated
+on demand — run `python scripts/generate_examples.py` with your own Azure
+OpenAI credentials (see [`examples/README.md`](examples/README.md)).
 
 ## What it does
 
