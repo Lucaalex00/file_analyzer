@@ -8,7 +8,7 @@ stored: the file exists only for the duration of the request.
 ## Quick start
 
 ```bash
-git clone <this-repo-url> && cd file-analyzer
+git clone https://github.com/Lucaalex00/file_analyzer.git && cd file_analyzer
 make env    # creates .env — fill in your Azure OpenAI credentials
 make up     # builds and starts the API at http://localhost:8000
 ```
