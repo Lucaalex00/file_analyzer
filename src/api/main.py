@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from fastapi.responses import Response
 
 from src.analyzer.document_analyzer import AnalysisError
