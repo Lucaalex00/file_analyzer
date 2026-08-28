@@ -12,7 +12,7 @@ body {
   font-family: system-ui, sans-serif;
   color: var(--fg);
   background: var(--bg);
-  max-width: 640px;
+  max-width: 1100px;
   margin: 3rem auto;
   padding: 0 1.5rem;
 }
@@ -59,8 +59,36 @@ button[type="submit"] {
   background: rgba(192, 57, 43, 0.08);
 }
 
-#result {
+#preview-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
   margin-top: 1.5rem;
+}
+
+@media (max-width: 800px) {
+  #preview-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+#extracted-text-panel h2,
+#result h2 {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+#extracted-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.9rem;
 }
 
 #report-preview {

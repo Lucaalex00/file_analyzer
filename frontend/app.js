@@ -6,6 +6,8 @@ const errorEl = document.getElementById("error-message");
 const resultEl = document.getElementById("result");
 const previewEl = document.getElementById("report-preview");
 const downloadEl = document.getElementById("download-link");
+const extractedTextPanel = document.getElementById("extracted-text-panel");
+const extractedTextEl = document.getElementById("extracted-text");
 
 const ERROR_MESSAGES = {
   413: "Il file è troppo grande.",
@@ -33,6 +35,31 @@ function resetOutcome() {
   }
 }
 
+function resetExtractedText() {
+  extractedTextPanel.hidden = true;
+  extractedTextEl.textContent = "";
+}
+
+async function showExtractedTextPreview(file) {
+  resetExtractedText();
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch("/extract", { method: "POST", body: formData });
+    if (!response.ok) {
+      return; // The definitive error surfaces when the user clicks Analizza.
+    }
+
+    const { text } = await response.json();
+    extractedTextEl.textContent = text;
+    extractedTextPanel.hidden = false;
+  } catch (networkError) {
+    // Silent: this is a best-effort preview, not the primary flow.
+  }
+}
+
 function showError(message) {
   errorEl.hidden = false;
   errorEl.textContent = message;
@@ -46,6 +73,16 @@ function showResult(blob, filename) {
   resultEl.hidden = false;
 }
 
+function handleFileSelected() {
+  const file = fileInput.files[0];
+  resetOutcome();
+  if (file) {
+    showExtractedTextPreview(file);
+  } else {
+    resetExtractedText();
+  }
+}
+
 ["dragover", "dragleave", "drop"].forEach((eventName) => {
   dropzone.addEventListener(eventName, (event) => event.preventDefault());
 });
@@ -54,8 +91,11 @@ dropzone.addEventListener("drop", (event) => {
   const droppedFiles = event.dataTransfer?.files;
   if (droppedFiles && droppedFiles.length > 0) {
     fileInput.files = droppedFiles;
+    handleFileSelected();
   }
 });
+
+fileInput.addEventListener("change", handleFileSelected);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();

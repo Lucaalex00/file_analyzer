@@ -23,6 +23,20 @@ test("uploading an unsupported file type shows a readable error, not raw JSON", 
   await expect(errorLocator).not.toContainText("Traceback");
 });
 
+test("selecting a file shows the extracted text preview before submitting", async ({ page }) => {
+  await page.goto("/");
+
+  await page.setInputFiles("input[type=file]", {
+    name: "memo.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Team, please submit your reports by Friday."),
+  });
+
+  const extractedText = page.locator("[data-role=extracted-text]");
+  await expect(extractedText).toBeVisible();
+  await expect(extractedText).toHaveText("Team, please submit your reports by Friday.");
+});
+
 test("successful analysis embeds the returned PDF and offers a download link", async ({ page }) => {
   const fakePdfBytes = Buffer.from("%PDF-1.4 fake report content");
 

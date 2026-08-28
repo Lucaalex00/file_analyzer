@@ -10,6 +10,11 @@ from src.report.report_generator import ReportGenerator
 
 
 @lru_cache
+def get_extractor_factory() -> ExtractorFactory:
+    return ExtractorFactory()
+
+
+@lru_cache
 def get_pipeline() -> DocumentAnalysisPipeline:
     settings = get_settings()
     client = AzureOpenAI(
