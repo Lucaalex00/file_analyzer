@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <title>File Analyzer</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main>
+    <h1>File Analyzer</h1>
+    <p class="subtitle">
+      Carica un contratto, una mail di lavoro o un documento personale — ricevi
+      una spiegazione chiara, un riassunto e gli eventuali punti di attenzione,
+      come report PDF.
+    </p>
+
+    <form id="analyze-form">
+      <label for="file-input" id="dropzone" class="dropzone">
+        <span id="dropzone-text">Trascina un file qui, o clicca per selezionarlo (.pdf, .txt, .docx)</span>
+        <input id="file-input" type="file" accept=".pdf,.txt,.docx" required />
+      </label>
+      <button type="submit">Analizza</button>
+    </form>
+
+    <div id="status" role="status"></div>
+    <div id="error-message" data-role="error-message" hidden></div>
+
+    <div id="result" hidden>
+      <embed id="report-preview" data-role="report-preview" type="application/pdf" />
+      <a id="download-link" data-role="download-link">Scarica il report</a>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

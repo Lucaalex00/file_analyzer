@@ -13,7 +13,10 @@ make env    # creates .env — fill in your Azure OpenAI credentials
 make up     # builds and starts the API at http://localhost:8000
 ```
 
-Try it:
+Then open http://localhost:8000 in a browser: drag a file in, click Analyze,
+and the report shows up inline with a download link.
+
+Or try it from the command line:
 
 ```bash
 curl -F "file=@examples/sample_lease_contract.txt" http://localhost:8000/analyze -o report.pdf
@@ -44,8 +47,9 @@ See [OVERVIEW.md](OVERVIEW.md) for the full technical breakdown, and
 ## Development
 
 ```bash
-make test   # pytest
-make lint   # ruff
+make test      # pytest
+make lint      # ruff
+make test-e2e  # Playwright, against the running stack (run `make up` first)
 ```
 
 ## Roadmap

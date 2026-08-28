@@ -6,6 +6,7 @@ examples/
 infra/
 scripts/
 tests/
+e2e/
 .venv/
 venv/
 __pycache__/

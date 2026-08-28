@@ -11,6 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
+COPY frontend/ frontend/
 
 RUN useradd --create-home --shell /bin/false appuser && chown -R appuser:appuser /app
 USER appuser

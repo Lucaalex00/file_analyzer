@@ -1,9 +1,10 @@
 import re
 from contextlib import asynccontextmanager
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 from src.analyzer.document_analyzer import AnalysisError
 from src.api.config import get_settings
@@ -21,7 +22,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="File Analyzer", lifespan=lifespan)
 
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
+app.mount("/static", StaticFiles(directory=_FRONTEND_DIR), name="static")
+
 _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]")
+
+
+@app.get("/")
+def index() -> FileResponse:
+    return FileResponse(_FRONTEND_DIR / "index.html")
 
 
 def _report_filename(original_filename: str) -> str:

@@ -24,8 +24,44 @@ jobs:
       - name: Test
         run: pytest --cov=src --cov-fail-under=80 -v
 
-  docker:
+  e2e:
     needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from example
+        run: cp .env.example .env
+      - name: Start the stack
+        run: docker compose up -d --build
+      - name: Wait for the API to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "API did not become healthy in time" >&2
+          docker compose logs
+          exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run e2e tests
+        working-directory: e2e
+        run: npx playwright test
+      - name: Stack logs (on failure)
+        if: failure()
+        run: docker compose logs
+      - name: Stop the stack
+        if: always()
+        run: docker compose down
+
+  docker:
+    needs: [test, e2e]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down demo test lint env
+.PHONY: help up down demo test test-e2e lint env
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -19,6 +19,9 @@ down: ## Stop the stack
 
 test: ## Run the full test suite locally (needs a venv with requirements-dev.txt installed)
 	pytest
+
+test-e2e: ## Run Playwright e2e tests against the running stack (run `make up` first)
+	cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
 
 lint: ## Run ruff
 	ruff check src tests
