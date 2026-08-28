@@ -1,3 +1,7 @@
+import re
+from contextlib import asynccontextmanager
+from pathlib import PurePosixPath
+
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from fastapi.responses import Response
 
@@ -8,7 +12,22 @@ from src.extractors.base import ExtractionError
 from src.extractors.factory import UnsupportedFileTypeError
 from src.pipeline import DocumentAnalysisPipeline
 
-app = FastAPI(title="File Analyzer")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    get_settings().validate()
+    yield
+
+
+app = FastAPI(title="File Analyzer", lifespan=lifespan)
+
+_UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]")
+
+
+def _report_filename(original_filename: str) -> str:
+    stem = PurePosixPath(original_filename.replace("\\", "/")).stem
+    safe_stem = _UNSAFE_FILENAME_CHARS.sub("_", stem) or "report"
+    return f"{safe_stem}-report.pdf"
 
 
 @app.get("/health")
@@ -46,4 +65,9 @@ async def analyze(
     except AnalysisError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return Response(content=pdf_bytes, media_type="application/pdf")
+    report_filename = _report_filename(file.filename or "upload")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{report_filename}"'},
+    )

@@ -88,3 +88,31 @@ def test_analyze_returns_502_on_analysis_error():
     )
 
     assert response.status_code == 502
+
+
+def test_analyze_sets_content_disposition_with_sanitized_filename():
+    fake_pipeline = MagicMock()
+    fake_pipeline.run.return_value = b"%PDF-1.4 fake pdf content"
+    override_pipeline(fake_pipeline)
+
+    response = client.post(
+        "/analyze",
+        files={"file": ("my report.pdf", b"Hello world", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == 'attachment; filename="my_report-report.pdf"'
+
+
+def test_analyze_strips_directory_components_from_filename():
+    fake_pipeline = MagicMock()
+    fake_pipeline.run.return_value = b"%PDF-1.4 fake pdf content"
+    override_pipeline(fake_pipeline)
+
+    response = client.post(
+        "/analyze",
+        files={"file": ("../../etc/passwd.txt", b"Hello world", "text/plain")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == 'attachment; filename="passwd-report.pdf"'
