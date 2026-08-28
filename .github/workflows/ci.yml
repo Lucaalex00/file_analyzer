@@ -45,11 +45,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install Playwright
+      - name: Install frontend test dependencies
         working-directory: e2e
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
+      - name: Run frontend unit tests
+        working-directory: e2e
+        run: npm run test:unit
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
       - name: Run e2e tests
         working-directory: e2e
         run: npx playwright test

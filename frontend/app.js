@@ -8,6 +8,9 @@ const previewEl = document.getElementById("report-preview");
 const downloadEl = document.getElementById("download-link");
 const extractedTextPanel = document.getElementById("extracted-text-panel");
 const extractedTextEl = document.getElementById("extracted-text");
+const historyListEl = document.getElementById("history-list");
+
+const HISTORY_MAX_ENTRIES = 10;
 
 const ERROR_MESSAGES = {
   413: "Il file è troppo grande.",
@@ -73,6 +76,65 @@ function showResult(blob, filename) {
   resultEl.hidden = false;
 }
 
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function base64ToBlob(base64, mimeType) {
+  const byteChars = atob(base64);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) {
+    byteNumbers[i] = byteChars.charCodeAt(i);
+  }
+  return new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
+}
+
+function renderHistory() {
+  const history = FileAnalyzerHistory.loadHistory(localStorage);
+  historyListEl.innerHTML = "";
+
+  history.forEach((entry, index) => {
+    const item = document.createElement("li");
+    item.dataset.role = "history-item";
+
+    const label = document.createElement("span");
+    label.textContent = `${new Date(entry.timestamp).toLocaleString("it-IT")} — ${entry.filename}`;
+    item.appendChild(label);
+
+    const reopenButton = document.createElement("button");
+    reopenButton.type = "button";
+    reopenButton.textContent = "Riapri";
+    reopenButton.dataset.role = "history-reopen";
+    reopenButton.addEventListener("click", () => {
+      const blob = base64ToBlob(entry.pdfBase64, "application/pdf");
+      showResult(blob, entry.reportFilename);
+    });
+    item.appendChild(reopenButton);
+
+    historyListEl.appendChild(item);
+  });
+}
+
+async function addToHistory(file, blob, reportFilename) {
+  const pdfBase64 = await blobToBase64(blob);
+  FileAnalyzerHistory.saveHistoryEntry(
+    localStorage,
+    {
+      timestamp: new Date().toISOString(),
+      filename: file.name,
+      reportFilename,
+      pdfBase64,
+    },
+    HISTORY_MAX_ENTRIES,
+  );
+  renderHistory();
+}
+
 function handleFileSelected() {
   const file = fileInput.files[0];
   resetOutcome();
@@ -122,9 +184,12 @@ form.addEventListener("submit", async (event) => {
     const blob = await response.blob();
     const filename = filenameFromContentDisposition(response.headers.get("content-disposition"));
     showResult(blob, filename);
+    await addToHistory(file, blob, filename);
   } catch (networkError) {
     showError("Impossibile contattare il servizio di analisi.");
   } finally {
     statusEl.textContent = "";
   }
 });
+
+renderHistory();
