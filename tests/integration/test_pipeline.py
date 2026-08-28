@@ -42,3 +42,21 @@ def test_pipeline_runs_end_to_end_for_txt_file():
     )
 
     assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_run_with_analysis_returns_both_the_analysis_and_the_pdf():
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=make_fake_openai_client(), deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, pdf_bytes = pipeline.run_with_analysis(
+        file_bytes=b"Team, please submit your reports by Friday.",
+        filename="memo.txt",
+        content_type="text/plain",
+    )
+
+    assert analysis.detected_context == "work"
+    assert analysis.summary == "A short memo reminding the team of a Friday deadline."
+    assert pdf_bytes.startswith(b"%PDF")

@@ -1,14 +1,21 @@
 const { test, expect } = require("@playwright/test");
 
 async function mockAnalyze(page) {
-  await page.route("**/analyze", async (route) => {
+  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
+
+  await page.route("**/analyze/review", async (route) => {
     await route.fulfill({
       status: 200,
-      contentType: "application/pdf",
-      headers: {
-        "content-disposition": 'attachment; filename="memo-report.pdf"',
-      },
-      body: Buffer.from("%PDF-1.4 fake report content"),
+      contentType: "application/json",
+      body: JSON.stringify({
+        analysis: {
+          detected_context: "work",
+          plain_explanation: "A short memo.",
+          summary: "A memo about a deadline.",
+          red_flags: [],
+        },
+        pdf_base64: fakePdfBase64,
+      }),
     });
   });
 }

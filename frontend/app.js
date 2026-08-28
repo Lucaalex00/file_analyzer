@@ -23,9 +23,30 @@ function friendlyErrorMessage(status) {
   return ERROR_MESSAGES[status] || "Si è verificato un errore imprevisto durante l'analisi.";
 }
 
-function filenameFromContentDisposition(header) {
-  const match = /filename="([^"]+)"/.exec(header || "");
-  return match ? match[1] : "report.pdf";
+let lastExtractedText = "";
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function highlightRedFlags(rawText, redFlags) {
+  let html = escapeHtml(rawText);
+  (redFlags || []).forEach((flag) => {
+    if (!flag.quote) {
+      return;
+    }
+    const escapedQuote = escapeHtml(flag.quote);
+    if (!html.includes(escapedQuote)) {
+      return;
+    }
+    const mark = `<mark class="severity-${flag.severity}" title="${escapeHtml(flag.title)}">${escapedQuote}</mark>`;
+    html = html.split(escapedQuote).join(mark);
+  });
+  return html;
 }
 
 function resetOutcome() {
@@ -41,6 +62,7 @@ function resetOutcome() {
 function resetExtractedText() {
   extractedTextPanel.hidden = true;
   extractedTextEl.textContent = "";
+  lastExtractedText = "";
 }
 
 async function showExtractedTextPreview(file) {
@@ -56,6 +78,7 @@ async function showExtractedTextPreview(file) {
     }
 
     const { text } = await response.json();
+    lastExtractedText = text;
     extractedTextEl.textContent = text;
     extractedTextPanel.hidden = false;
   } catch (networkError) {
@@ -174,17 +197,22 @@ form.addEventListener("submit", async (event) => {
   formData.append("file", file);
 
   try {
-    const response = await fetch("/analyze", { method: "POST", body: formData });
+    const response = await fetch("/analyze/review", { method: "POST", body: formData });
 
     if (!response.ok) {
       showError(friendlyErrorMessage(response.status));
       return;
     }
 
-    const blob = await response.blob();
-    const filename = filenameFromContentDisposition(response.headers.get("content-disposition"));
+    const { analysis, pdf_base64: pdfBase64 } = await response.json();
+    const blob = base64ToBlob(pdfBase64, "application/pdf");
+    const filename = FileAnalyzerFilename.reportFilenameFor(file.name);
     showResult(blob, filename);
     await addToHistory(file, blob, filename);
+
+    if (lastExtractedText) {
+      extractedTextEl.innerHTML = highlightRedFlags(lastExtractedText, analysis.red_flags);
+    }
   } catch (networkError) {
     showError("Impossibile contattare il servizio di analisi.");
   } finally {

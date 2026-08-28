@@ -7,7 +7,12 @@ exactly this schema:
   "plain_explanation": string,  // clear explanation in plain language, no jargon
   "summary": string,            // 2-4 sentence summary of the document
   "red_flags": [
-    {"title": string, "description": string, "severity": "low" | "medium" | "high"}
+    {
+      "title": string,
+      "description": string,
+      "severity": "low" | "medium" | "high",
+      "quote": string  // the exact excerpt from the document that triggered this flag
+    }
   ]
 }
 
@@ -15,7 +20,10 @@ detected_context is your best guess at the document's domain based on its conten
 (a contract or court notice is "legal", a work email or report is "work", a personal \
 letter or medical result is "personal", anything else is "other"). red_flags lists \
 concerning clauses, deadlines, unusual requests, or risks a non-expert should notice \
-- return an empty list if there are none. Respond with JSON only, no other text."""
+- return an empty list if there are none. quote must be copied verbatim from the \
+document (exact substring, not paraphrased) so it can be highlighted back in the \
+original text - use an empty string only if no specific excerpt applies. Respond \
+with JSON only, no other text."""
 
 
 # Hard cap on document text sent to the LLM. An accepted upload can be up to

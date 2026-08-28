@@ -38,16 +38,21 @@ test("selecting a file shows the extracted text preview before submitting", asyn
 });
 
 test("successful analysis embeds the returned PDF and offers a download link", async ({ page }) => {
-  const fakePdfBytes = Buffer.from("%PDF-1.4 fake report content");
+  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
 
-  await page.route("**/analyze", async (route) => {
+  await page.route("**/analyze/review", async (route) => {
     await route.fulfill({
       status: 200,
-      contentType: "application/pdf",
-      headers: {
-        "content-disposition": 'attachment; filename="memo-report.pdf"',
-      },
-      body: fakePdfBytes,
+      contentType: "application/json",
+      body: JSON.stringify({
+        analysis: {
+          detected_context: "work",
+          plain_explanation: "A short memo.",
+          summary: "A memo about a deadline.",
+          red_flags: [],
+        },
+        pdf_base64: fakePdfBase64,
+      }),
     });
   });
 
@@ -65,4 +70,44 @@ test("successful analysis embeds the returned PDF and offers a download link", a
   const downloadLink = page.locator("a[data-role=download-link]");
   await expect(downloadLink).toBeVisible();
   await expect(downloadLink).toHaveAttribute("download", "memo-report.pdf");
+});
+
+test("red flags with a matching quote are highlighted in the extracted text", async ({ page }) => {
+  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
+
+  await page.route("**/analyze/review", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        analysis: {
+          detected_context: "work",
+          plain_explanation: "A short memo.",
+          summary: "A memo about a deadline.",
+          red_flags: [
+            {
+              title: "Tight deadline",
+              description: "The deadline is very close.",
+              severity: "medium",
+              quote: "by Friday",
+            },
+          ],
+        },
+        pdf_base64: fakePdfBase64,
+      }),
+    });
+  });
+
+  await page.goto("/");
+
+  await page.setInputFiles("input[type=file]", {
+    name: "memo.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Team, please submit your reports by Friday."),
+  });
+  await page.getByRole("button", { name: /analizza/i }).click();
+
+  const highlighted = page.locator("[data-role=extracted-text] mark.severity-medium");
+  await expect(highlighted).toBeVisible();
+  await expect(highlighted).toHaveText("by Friday");
 });

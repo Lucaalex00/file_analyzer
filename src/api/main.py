@@ -1,3 +1,4 @@
+import base64
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
@@ -104,3 +105,30 @@ async def analyze(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{report_filename}"'},
     )
+
+
+@app.post("/analyze/review")
+async def analyze_review(
+    file: UploadFile,
+    pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
+) -> dict:
+    settings = get_settings()
+    file_bytes = await _read_within_size_limit(file, settings)
+
+    try:
+        analysis, pdf_bytes = pipeline.run_with_analysis(
+            file_bytes=file_bytes,
+            filename=file.filename or "upload",
+            content_type=file.content_type,
+        )
+    except UnsupportedFileTypeError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except ExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except AnalysisError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return {
+        "analysis": analysis.model_dump(),
+        "pdf_base64": base64.b64encode(pdf_bytes).decode("ascii"),
+    }

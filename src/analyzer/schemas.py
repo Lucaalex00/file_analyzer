@@ -7,6 +7,7 @@ class RedFlag(BaseModel):
     title: str
     description: str
     severity: Literal["low", "medium", "high"]
+    quote: str = ""
 
 
 class AnalysisResult(BaseModel):

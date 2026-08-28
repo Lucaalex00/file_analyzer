@@ -14,9 +14,16 @@
 4. `ReportGenerator` renders `AnalysisResult` into an HTML template and
    converts it to PDF bytes via WeasyPrint (see
    [docs/adr/0001-pdf-generation-weasyprint.md](docs/adr/0001-pdf-generation-weasyprint.md)).
-5. `DocumentAnalysisPipeline` wires the three stages together; `POST /analyze`
-   maps their exceptions to HTTP status codes (415/422/502) and streams the
-   PDF back on success.
+5. `DocumentAnalysisPipeline` wires the three stages together. `POST /analyze`
+   maps their exceptions to HTTP status codes (415/422/502) and returns the
+   PDF directly — the contract curl/CLI consumers rely on. `POST /analyze/review`
+   runs the same pipeline (`run_with_analysis`, one LLM call, no duplicated
+   cost) but returns JSON (`{"analysis": {...}, "pdf_base64": "..."}`) instead
+   — used by the frontend, which needs the structured `red_flags` (each with a
+   verbatim `quote` from the source text) to highlight them back in the
+   extracted-text preview, something a raw PDF response can't carry.
+   `POST /extract` runs extraction only (no LLM call) so the frontend can show
+   the raw text as soon as a file is selected, before the user even submits.
 
 ## Statelessness
 
