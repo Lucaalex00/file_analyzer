@@ -31,7 +31,7 @@ with JSON only, no other text."""
 # a plain truncation is enough for this MVP.
 MAX_DOCUMENT_CHARS = 80_000
 
-_LANGUAGE_NAMES = {
+LANGUAGE_NAMES = {
     "it": "Italian",
     "en": "English",
     "fr": "French",
@@ -41,7 +41,7 @@ _LANGUAGE_NAMES = {
 
 
 def build_user_prompt(document_text: str, language: str = "it") -> str:
-    language_name = _LANGUAGE_NAMES.get(language, language)
+    language_name = LANGUAGE_NAMES.get(language, language)
     truncated = document_text[:MAX_DOCUMENT_CHARS]
     return (
         f"Respond in {language_name} for plain_explanation, summary, and each red flag's "

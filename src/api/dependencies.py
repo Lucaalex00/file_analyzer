@@ -3,6 +3,7 @@ from functools import lru_cache
 from openai import AzureOpenAI
 
 from src.analyzer.document_analyzer import DocumentAnalyzer
+from src.analyzer.document_comparator import DocumentComparator
 from src.api.config import get_settings
 from src.extractors.factory import ExtractorFactory
 from src.pipeline import DocumentAnalysisPipeline
@@ -14,10 +15,9 @@ def get_extractor_factory() -> ExtractorFactory:
     return ExtractorFactory()
 
 
-@lru_cache
-def get_pipeline() -> DocumentAnalysisPipeline:
+def _build_azure_client() -> AzureOpenAI:
     settings = get_settings()
-    client = AzureOpenAI(
+    return AzureOpenAI(
         azure_endpoint=settings.azure_openai_endpoint,
         api_key=settings.azure_openai_api_key,
         api_version=settings.azure_openai_api_version,
@@ -26,8 +26,24 @@ def get_pipeline() -> DocumentAnalysisPipeline:
         timeout=30.0,
         max_retries=0,
     )
+
+
+@lru_cache
+def get_document_analyzer() -> DocumentAnalyzer:
+    settings = get_settings()
+    return DocumentAnalyzer(client=_build_azure_client(), deployment=settings.azure_openai_deployment)
+
+
+@lru_cache
+def get_document_comparator() -> DocumentComparator:
+    settings = get_settings()
+    return DocumentComparator(client=_build_azure_client(), deployment=settings.azure_openai_deployment)
+
+
+@lru_cache
+def get_pipeline() -> DocumentAnalysisPipeline:
     return DocumentAnalysisPipeline(
         factory=ExtractorFactory(),
-        analyzer=DocumentAnalyzer(client=client, deployment=settings.azure_openai_deployment),
+        analyzer=get_document_analyzer(),
         report_generator=ReportGenerator(),
     )

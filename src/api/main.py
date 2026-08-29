@@ -11,8 +11,9 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from src.analyzer.document_analyzer import AnalysisError
+from src.analyzer.document_comparator import ComparisonError, DocumentComparator
 from src.api.config import Settings, get_settings
-from src.api.dependencies import get_extractor_factory, get_pipeline
+from src.api.dependencies import get_document_comparator, get_extractor_factory, get_pipeline
 from src.extractors.base import ExtractionError
 from src.extractors.factory import ExtractorFactory, UnsupportedFileTypeError
 from src.pipeline import DocumentAnalysisPipeline
@@ -188,3 +189,35 @@ async def analyze_markdown(
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{report_filename}"'},
     )
+
+
+@app.post("/compare")
+@limiter.limit(_rate_limit)
+async def compare(
+    request: Request,
+    file_a: UploadFile,
+    file_b: UploadFile,
+    language: str = Form("it"),
+    factory: ExtractorFactory = Depends(get_extractor_factory),
+    comparator: DocumentComparator = Depends(get_document_comparator),
+) -> dict:
+    settings = get_settings()
+    bytes_a = await _read_within_size_limit(file_a, settings)
+    bytes_b = await _read_within_size_limit(file_b, settings)
+    name_a = file_a.filename or "version_a"
+    name_b = file_b.filename or "version_b"
+
+    try:
+        extractor_a = factory.get_extractor(name_a, file_a.content_type)
+        text_a = extractor_a.extract(bytes_a, name_a).content
+        extractor_b = factory.get_extractor(name_b, file_b.content_type)
+        text_b = extractor_b.extract(bytes_b, name_b).content
+        comparison = comparator.compare(text_a, text_b, language=language)
+    except UnsupportedFileTypeError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except ExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ComparisonError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return {"comparison": comparison.model_dump()}
