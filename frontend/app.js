@@ -81,6 +81,9 @@ themeToggleButton.addEventListener("click", () => {
 
 function applyLanguageToUI() {
   FileAnalyzerI18n.applyTranslations(languageSelect.value, document);
+  const themeToggleLabel = FileAnalyzerI18n.translate(languageSelect.value, "themeToggle");
+  themeToggleButton.title = themeToggleLabel;
+  themeToggleButton.setAttribute("aria-label", themeToggleLabel);
 }
 
 languageSelect.addEventListener("change", applyLanguageToUI);

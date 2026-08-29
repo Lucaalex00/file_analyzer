@@ -1,10 +1,11 @@
 import io
+from unittest.mock import MagicMock
 
 import pytest
 from pypdf import PdfWriter
 
 from src.extractors.base import ExtractionError
-from src.extractors.pdf_extractor import PdfExtractor
+from src.extractors.pdf_extractor import PdfExtractor, _looks_corrupted, _ocr_pdf_pages
 
 
 def make_pdf_bytes(pages_text: list[str]) -> bytes:
@@ -115,3 +116,68 @@ class TestExtract:
 
         assert "Codice Azienda" in raw.content
         assert "CodiceAzienda" not in raw.content
+
+
+class TestLooksCorrupted:
+    def test_detects_the_space_replaced_by_stray_character_pattern(self):
+        # The exact real-world failure mode: every space in the source PDF's
+        # embedded font encoding maps to a stray letter instead of a space,
+        # so the extracted text has almost no real whitespace at all.
+        text = "PERIODOsDIsRETRIBUZIONEsCODICEsAZIENDAsRAGIONEsSOCIALEsINDIRIZZOsCODICEsFISCALE"
+        assert _looks_corrupted(text) is True
+
+    def test_does_not_flag_normal_prose(self):
+        text = "This is a normal sentence with completely ordinary spacing between each word."
+        assert _looks_corrupted(text) is False
+
+    def test_does_not_flag_short_text(self):
+        # Short strings naturally have fewer spaces relative to length;
+        # judging them by the same density threshold would false-positive.
+        assert _looks_corrupted("Hello Contract") is False
+
+
+class TestOcrPdfPagesReal:
+    def test_real_ocr_reads_the_rendered_page_content(self):
+        # No mocking here: proves the page.to_image() + pytesseract plumbing
+        # itself actually works, complementing the mocked branching tests
+        # below (which can't forge a genuinely broken font encoding by hand).
+        stream_content = b"BT /F1 24 Tf 10 100 Td (HELLO OCR) Tj ET\n"
+        pdf_content = _build_minimal_pdf(stream_content)
+
+        result = _ocr_pdf_pages(pdf_content)
+
+        assert "HELLO" in result.upper()
+
+
+class TestOcrFallback:
+    def test_falls_back_to_ocr_when_the_text_layer_looks_corrupted(self):
+        garbled_stream = b"BT /F1 12 Tf 10 100 Td (PERIODOsDIsRETRIBUZIONEsCODICEsAZIENDAsRAGIONEsSOCIALE) Tj ET\n"
+        pdf_content = _build_minimal_pdf(garbled_stream)
+        fake_ocr = MagicMock(return_value="PERIODO DI RETRIBUZIONE CODICE AZIENDA RAGIONE SOCIALE")
+
+        extractor = PdfExtractor(ocr_fn=fake_ocr)
+        raw = extractor.extract(pdf_content, "payslip.pdf")
+
+        fake_ocr.assert_called_once()
+        assert raw.content == "PERIODO DI RETRIBUZIONE CODICE AZIENDA RAGIONE SOCIALE"
+
+    def test_does_not_fall_back_when_the_text_layer_looks_fine(self):
+        stream_content = b"BT /F1 12 Tf 10 100 Td (Hello Contract) Tj ET\n"
+        pdf_content = _build_minimal_pdf(stream_content)
+        fake_ocr = MagicMock(return_value="should not be used")
+
+        extractor = PdfExtractor(ocr_fn=fake_ocr)
+        raw = extractor.extract(pdf_content, "contract.pdf")
+
+        fake_ocr.assert_not_called()
+        assert "Hello Contract" in raw.content
+
+    def test_raises_extraction_error_when_ocr_fallback_also_finds_nothing(self):
+        garbled_stream = b"BT /F1 12 Tf 10 100 Td (AsBsCsDsEsFsGsHsIsJsKsLsMsNsOsPsQsRsSsTsUsVsWsXsYsZ) Tj ET\n"
+        pdf_content = _build_minimal_pdf(garbled_stream)
+        fake_ocr = MagicMock(return_value="")
+
+        extractor = PdfExtractor(ocr_fn=fake_ocr)
+
+        with pytest.raises(ExtractionError):
+            extractor.extract(pdf_content, "blank-scan.pdf")
