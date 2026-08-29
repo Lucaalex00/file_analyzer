@@ -3,9 +3,12 @@ import re
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 
-from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from src.analyzer.document_analyzer import AnalysisError
 from src.api.config import Settings, get_settings
@@ -25,6 +28,14 @@ app = FastAPI(title="File Analyzer", lifespan=lifespan)
 
 _FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 app.mount("/static", StaticFiles(directory=_FRONTEND_DIR), name="static")
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+def _rate_limit() -> str:
+    return f"{get_settings().rate_limit_per_minute}/minute"
 
 _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]")
 
@@ -60,7 +71,9 @@ async def _read_within_size_limit(file: UploadFile, settings: Settings) -> bytes
 
 
 @app.post("/extract")
+@limiter.limit(_rate_limit)
 async def extract(
+    request: Request,
     file: UploadFile,
     factory: ExtractorFactory = Depends(get_extractor_factory),
 ) -> dict[str, str]:
@@ -79,7 +92,9 @@ async def extract(
 
 
 @app.post("/analyze")
+@limiter.limit(_rate_limit)
 async def analyze(
+    request: Request,
     file: UploadFile,
     language: str = Form("it"),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
@@ -110,7 +125,9 @@ async def analyze(
 
 
 @app.post("/analyze/review")
+@limiter.limit(_rate_limit)
 async def analyze_review(
+    request: Request,
     file: UploadFile,
     language: str = Form("it"),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
@@ -139,7 +156,9 @@ async def analyze_review(
 
 
 @app.post("/analyze/markdown")
+@limiter.limit(_rate_limit)
 async def analyze_markdown(
+    request: Request,
     file: UploadFile,
     language: str = Form("it"),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
