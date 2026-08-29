@@ -6,20 +6,24 @@
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <main>
+  <header class="page-header">
     <h1>File Analyzer</h1>
-    <p class="subtitle">
+    <button type="button" id="theme-toggle" data-role="theme-toggle" data-i18n="themeToggle" title="Cambia tema" aria-label="Cambia tema">🌓</button>
+  </header>
+
+  <main>
+    <p class="subtitle" data-i18n="subtitle">
       Carica un contratto, una mail di lavoro o un documento personale — ricevi
-      una spiegazione chiara, un riassunto e gli eventuali punti di attenzione,
-      come report PDF.
+      una spiegazione chiara, un riassunto e gli eventuali punti di attenzione.
     </p>
 
     <form id="analyze-form">
       <label for="file-input" id="dropzone" class="dropzone">
-        <span id="dropzone-text">Trascina un file qui, o clicca per selezionarlo (.pdf, .txt, .docx, .eml, .png, .jpg, .jpeg, .tiff, .bmp)</span>
+        <span id="dropzone-text" data-i18n="dropzoneText">Trascina un file qui, o clicca per selezionarlo (.pdf, .txt, .docx, .eml, .png, .jpg, .jpeg, .tiff, .bmp)</span>
         <input id="file-input" type="file" accept=".pdf,.txt,.docx,.eml,.png,.jpg,.jpeg,.tiff,.bmp" required />
       </label>
-      <label for="language-select">Lingua della spiegazione</label>
+
+      <label for="language-select" data-i18n="languageLabel">Lingua della spiegazione</label>
       <select id="language-select" data-role="language-select">
         <option value="it" selected>Italiano</option>
         <option value="en">English</option>
@@ -28,34 +32,48 @@
         <option value="es">Español</option>
       </select>
 
-      <button type="submit">Analizza</button>
+      <button type="submit" data-i18n="analyzeButton">Analizza</button>
     </form>
 
     <div id="status" role="status"></div>
     <div id="error-message" data-role="error-message" hidden></div>
 
-    <div id="preview-columns">
-      <section id="extracted-text-panel" hidden>
-        <h2>Testo estratto</h2>
+    <div class="sections">
+      <details class="section" id="extracted-text-panel" hidden open>
+        <summary data-i18n="extractedTextHeading">Testo estratto</summary>
+        <button type="button" class="copy-button" data-role="copy-extracted-text" data-i18n="copyButton">Copia</button>
         <pre id="extracted-text" data-role="extracted-text"></pre>
-      </section>
+      </details>
 
-      <section id="result" hidden>
-        <h2>Report</h2>
+      <details class="section" id="analysis-panel" hidden open>
+        <summary data-i18n="analysisHeading">Analisi</summary>
+        <button type="button" class="copy-button" data-role="copy-analysis" data-i18n="copyButton">Copia</button>
+        <p><strong data-i18n="contextLabel">Contesto rilevato</strong>: <span data-role="analysis-context"></span></p>
+        <p><strong data-i18n="summaryLabel">Riassunto</strong></p>
+        <p data-role="analysis-summary"></p>
+        <p><strong data-i18n="explanationLabel">Spiegazione</strong></p>
+        <p data-role="analysis-explanation"></p>
+        <p><strong data-i18n="redFlagsHeading">Punti di attenzione</strong></p>
+        <ul data-role="analysis-red-flags"></ul>
+      </details>
+
+      <details class="section" id="result" hidden open>
+        <summary data-i18n="reportHeading">Report</summary>
         <embed id="report-preview" data-role="report-preview" type="application/pdf" />
-        <a id="download-link" data-role="download-link">Scarica il report (PDF)</a>
-        <button type="button" id="download-markdown-button" data-role="download-markdown-button" hidden>
+        <a id="download-link" data-role="download-link" data-i18n="downloadPdf">Scarica PDF</a>
+        <button type="button" id="download-markdown-button" data-role="download-markdown-button" data-i18n="downloadMarkdown" hidden>
           Scarica anche in Markdown
         </button>
-      </section>
-    </div>
+      </details>
 
-    <section id="history-panel">
-      <h2>Cronologia (solo su questo browser)</h2>
-      <ul id="history-list" data-role="history-list"></ul>
-    </section>
+      <details class="section" id="history-panel" open>
+        <summary data-i18n="historyHeading">Cronologia (solo su questo browser)</summary>
+        <ul id="history-list" data-role="history-list"></ul>
+      </details>
+    </div>
   </main>
 
+  <script src="/static/i18n.js"></script>
   <script src="/static/history.js"></script>
   <script src="/static/filename.js"></script>
   <script src="/static/app.js"></script>
