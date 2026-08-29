@@ -28,12 +28,13 @@ OpenAI credentials (see [`examples/README.md`](examples/README.md)).
 
 ## What it does
 
-- Accepts `.pdf`, `.txt`, `.docx`, and scanned images (`.png`, `.jpg`, `.jpeg`,
-  `.tiff`, `.bmp` — via OCR, no cloud vision service needed)
+- Accepts `.pdf`, `.txt`, `.docx`, `.eml` emails, and scanned images (`.png`,
+  `.jpg`, `.jpeg`, `.tiff`, `.bmp` — via OCR, no cloud vision service needed)
 - Detects whether the document is legal, work-related, or personal
 - Explains it in plain language (choose it/en/fr/de/es), summarizes it, and
   flags anything risky or worth a second look — backed by both the LLM and a
-  rule-based pre-check (auto-renewal, penalties, tight deadlines)
+  rule-based pre-check (auto-renewal, penalties, tight deadlines, phishing-style
+  urgency/credential requests)
 - Highlights each flagged passage back in the original text (explainability)
 - Returns the analysis as a PDF report, as Markdown, or as structured JSON
 - Compares two versions of a document and reports what changed
@@ -59,7 +60,7 @@ rate-limited per client IP (`RATE_LIMIT_PER_MINUTE`, default 20/minute).
 ## Architecture
 
 ```
-Upload → Extractor (pdf/txt/docx/image via OCR) → Analyzer (Azure OpenAI + rule-based) → Report (PDF/Markdown) → Response
+Upload → Extractor (pdf/txt/docx/eml/image via OCR) → Analyzer (Azure OpenAI + rule-based) → Report (PDF/Markdown) → Response
 ```
 
 See [OVERVIEW.md](OVERVIEW.md) for the full technical breakdown, and
@@ -76,7 +77,6 @@ make test-frontend-unit  # Node's built-in test runner, no running stack needed
 
 ## Roadmap
 
-Not yet built: `.eml`/`.msg` email analysis (drops in as another
-`Extractor` implementation, same pattern as the image/OCR extractor), a
-standalone CLI, and a real Azure Functions deploy (Bicep already in
+Not yet built: `.msg` (Outlook binary format) email support — `.eml` is
+covered — a standalone CLI, and a real Azure Functions deploy (Bicep already in
 `infra/`, gated behind a manual, explicitly-approved step).

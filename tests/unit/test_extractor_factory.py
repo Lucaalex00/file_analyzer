@@ -1,6 +1,7 @@
 import pytest
 
 from src.extractors.base import BaseExtractor, RawText
+from src.extractors.email_extractor import EmailExtractor
 from src.extractors.factory import ExtractorFactory, UnsupportedFileTypeError
 from src.extractors.image_extractor import ImageExtractor
 from src.extractors.pdf_extractor import PdfExtractor
@@ -40,6 +41,12 @@ def test_default_factory_selects_image_extractor_for_png():
     factory = ExtractorFactory()
     extractor = factory.get_extractor("photo.png", "image/png")
     assert isinstance(extractor, ImageExtractor)
+
+
+def test_default_factory_selects_email_extractor_for_eml():
+    factory = ExtractorFactory()
+    extractor = factory.get_extractor("notice.eml", "message/rfc822")
+    assert isinstance(extractor, EmailExtractor)
 
 
 def test_raises_unsupported_file_type_for_unknown_extension():

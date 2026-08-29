@@ -22,6 +22,13 @@ def test_detects_short_deadline():
     assert "Scadenza ravvicinata" in titles
 
 
+def test_detects_phishing_style_urgency_and_credential_requests():
+    flags = detect_rule_based_flags("Please verify your account immediately or it will be suspended.")
+
+    titles = [f.title for f in flags]
+    assert "Possibile phishing" in titles
+
+
 def test_returns_empty_list_when_no_patterns_match():
     flags = detect_rule_based_flags("Just a friendly letter with no legal content.")
 

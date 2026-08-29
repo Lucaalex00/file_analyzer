@@ -30,6 +30,20 @@ _RULES = [
         ),
         "severity": "medium",
     },
+    {
+        "pattern": re.compile(
+            r"verify your account|confirm your password|click here immediately|"
+            r"urgent action required|verifica il tuo account|conferma la tua password",
+            re.IGNORECASE,
+        ),
+        "title": "Possibile phishing",
+        "description": (
+            "Il testo usa un linguaggio tipico del phishing (urgenza, richiesta di "
+            "credenziali o verifica account): non cliccare link né inserire "
+            "credenziali senza aver verificato il mittente."
+        ),
+        "severity": "high",
+    },
 ]
 
 
