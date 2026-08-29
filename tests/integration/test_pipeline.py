@@ -60,3 +60,20 @@ def test_run_with_analysis_returns_both_the_analysis_and_the_pdf():
     assert analysis.detected_context == "work"
     assert analysis.summary == "A short memo reminding the team of a Friday deadline."
     assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_run_with_analysis_merges_rule_based_flags_with_llm_flags():
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=make_fake_openai_client(), deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, _ = pipeline.run_with_analysis(
+        file_bytes=b"This lease renews automatically unless cancelled by either party.",
+        filename="lease.txt",
+        content_type="text/plain",
+    )
+
+    titles = [flag.title for flag in analysis.red_flags]
+    assert "Rinnovo automatico" in titles

@@ -1,4 +1,5 @@
 from src.analyzer.document_analyzer import DocumentAnalyzer
+from src.analyzer.rule_based_flags import detect_rule_based_flags
 from src.analyzer.schemas import AnalysisResult
 from src.extractors.factory import ExtractorFactory
 from src.report.report_generator import ReportGenerator
@@ -25,5 +26,12 @@ class DocumentAnalysisPipeline:
         extractor = self._factory.get_extractor(filename, content_type)
         raw_text = extractor.extract(file_bytes, filename)
         analysis = self._analyzer.analyze(raw_text)
+
+        rule_based_flags = detect_rule_based_flags(raw_text.content)
+        existing_titles = {flag.title for flag in analysis.red_flags}
+        analysis.red_flags = analysis.red_flags + [
+            flag for flag in rule_based_flags if flag.title not in existing_titles
+        ]
+
         pdf_bytes = self._report_generator.generate(analysis, original_filename=filename)
         return analysis, pdf_bytes
