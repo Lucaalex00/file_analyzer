@@ -2,15 +2,20 @@
 
 ## Pipeline
 
-1. `ExtractorFactory` picks an `Extractor` (`PdfExtractor`, `TextExtractor`) by
-   file extension.
+1. `ExtractorFactory` picks an `Extractor` (`PdfExtractor`, `TextExtractor`,
+   `ImageExtractor`) by file extension. `ImageExtractor` runs Tesseract OCR
+   locally (via `pytesseract`) — no cloud vision service, no extra cost.
 2. The extractor returns `RawText` — plain extracted text plus the source
-   filename. Extraction failures (corrupt file, empty/unreadable content) raise
-   `ExtractionError`.
+   filename. Extraction failures (corrupt file, empty/unreadable content, no
+   text recognized in an image) raise `ExtractionError`.
 3. `DocumentAnalyzer` sends the text to Azure OpenAI with a system prompt that
    forces a JSON response, parsed into a Pydantic `AnalysisResult` (detected
-   context, plain explanation, summary, red flags). A malformed response or a
-   client-side failure after retries raises `AnalysisError`.
+   context, plain explanation, summary, red flags, each translated into the
+   requested `language`). A malformed response or a client-side failure after
+   retries raises `AnalysisError`. `src/analyzer/rule_based_flags.py` adds a
+   second, independent pass (regex-based, no LLM call) whose results are
+   merged in — a document is never left with zero flags just because the
+   model missed something a simple pattern would have caught.
 4. `ReportGenerator` renders `AnalysisResult` into an HTML template and
    converts it to PDF bytes via WeasyPrint (see
    [docs/adr/0001-pdf-generation-weasyprint.md](docs/adr/0001-pdf-generation-weasyprint.md)).

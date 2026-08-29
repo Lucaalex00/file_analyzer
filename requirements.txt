@@ -10,3 +10,5 @@ openai==1.51.0
 python-multipart==0.0.12
 azure-functions==1.21.3
 slowapi==0.1.9
+pytesseract==0.3.13
+Pillow==12.3.0

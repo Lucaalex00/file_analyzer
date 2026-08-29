@@ -28,17 +28,38 @@ OpenAI credentials (see [`examples/README.md`](examples/README.md)).
 
 ## What it does
 
-- Accepts `.pdf`, `.txt`, `.docx`
+- Accepts `.pdf`, `.txt`, `.docx`, and scanned images (`.png`, `.jpg`, `.jpeg`,
+  `.tiff`, `.bmp` — via OCR, no cloud vision service needed)
 - Detects whether the document is legal, work-related, or personal
-- Explains it in plain language, summarizes it, and flags anything risky or
-  worth a second look
-- Returns everything as one PDF report (or Markdown, via `POST /analyze/markdown`)
-  — nothing is written to disk or a database
+- Explains it in plain language (choose it/en/fr/de/es), summarizes it, and
+  flags anything risky or worth a second look — backed by both the LLM and a
+  rule-based pre-check (auto-renewal, penalties, tight deadlines)
+- Highlights each flagged passage back in the original text (explainability)
+- Returns the analysis as a PDF report, as Markdown, or as structured JSON
+- Compares two versions of a document and reports what changed
+- Analyzes several files in one batch request
+- Nothing is written to disk or a database — everything lives in memory for
+  the duration of the request; the browser's local history (if you use the
+  web UI) is the only thing that persists, and only in your own browser
+
+## API
+
+| Endpoint | Returns | Notes |
+|---|---|---|
+| `POST /extract` | `{"text": "..."}` | Extraction only, no LLM call |
+| `POST /analyze` | PDF | The stable contract for curl/CLI consumers |
+| `POST /analyze/review` | JSON (`analysis` + `pdf_base64`) | Used by the web UI |
+| `POST /analyze/markdown` | Markdown file | |
+| `POST /analyze/batch` | JSON (`results[]`, one per file) | |
+| `POST /compare` | JSON (`comparison`) | Takes `file_a` + `file_b` |
+
+All of the above accept an optional `language` field (`it` default) and are
+rate-limited per client IP (`RATE_LIMIT_PER_MINUTE`, default 20/minute).
 
 ## Architecture
 
 ```
-Upload → Extractor (pdf/txt/docx) → Analyzer (Azure OpenAI) → Report (PDF) → Response
+Upload → Extractor (pdf/txt/docx/image via OCR) → Analyzer (Azure OpenAI + rule-based) → Report (PDF/Markdown) → Response
 ```
 
 See [OVERVIEW.md](OVERVIEW.md) for the full technical breakdown, and
@@ -47,13 +68,15 @@ See [OVERVIEW.md](OVERVIEW.md) for the full technical breakdown, and
 ## Development
 
 ```bash
-make test      # pytest
-make lint      # ruff
-make test-e2e  # Playwright, against the running stack (run `make up` first)
+make test               # pytest
+make lint                # ruff
+make test-e2e            # Playwright, against the running stack (run `make up` first)
+make test-frontend-unit  # Node's built-in test runner, no running stack needed
 ```
 
 ## Roadmap
 
-Fase 2 (not in this MVP): OCR for scanned images, `.eml`/`.msg` email analysis
-— both drop in as new `Extractor` implementations without touching the rest of
-the pipeline.
+Not yet built: `.eml`/`.msg` email analysis (drops in as another
+`Extractor` implementation, same pattern as the image/OCR extractor), a
+standalone CLI, and a real Azure Functions deploy (Bicep already in
+`infra/`, gated behind a manual, explicitly-approved step).
