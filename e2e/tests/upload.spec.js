@@ -37,6 +37,27 @@ test("selecting a file shows the extracted text preview before submitting", asyn
   await expect(extractedText).toHaveText("Team, please submit your reports by Friday.");
 });
 
+test("a failed extraction preview shows an error immediately, not silently nothing", async ({ page }) => {
+  await page.route("**/extract", async (route) => {
+    await route.fulfill({
+      status: 422,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "No text could be recognized" }),
+    });
+  });
+  await page.goto("/");
+
+  await page.setInputFiles("input[type=file]", {
+    name: "logo.png",
+    mimeType: "image/png",
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+  });
+
+  const errorLocator = page.locator("[data-role=error-message]");
+  await expect(errorLocator).toBeVisible();
+  await expect(page.locator("[data-role=extracted-text]")).toBeHidden();
+});
+
 test("successful analysis embeds the returned PDF and offers a download link", async ({ page }) => {
   const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
 

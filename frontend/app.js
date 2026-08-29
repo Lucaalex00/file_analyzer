@@ -197,7 +197,8 @@ async function showExtractedTextPreview(file) {
   try {
     const response = await fetch("/extract", { method: "POST", body: formData });
     if (!response.ok) {
-      return; // The definitive error surfaces when the user clicks Analizza.
+      showError(friendlyErrorMessage(response.status));
+      return;
     }
 
     const { text } = await response.json();
@@ -205,7 +206,7 @@ async function showExtractedTextPreview(file) {
     extractedTextEl.textContent = text;
     extractedTextPanel.hidden = false;
   } catch (networkError) {
-    // Silent: this is a best-effort preview, not the primary flow.
+    showError(FileAnalyzerI18n.translate(languageSelect.value, "errNetwork"));
   }
 }
 
