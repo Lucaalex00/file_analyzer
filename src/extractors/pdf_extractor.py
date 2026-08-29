@@ -45,18 +45,80 @@ def _preprocess_for_ocr(image):
     return grayscale.point(lambda pixel: 255 if pixel > 150 else 0)
 
 
+_TABLE_RESOLUTION = 300
+_POINTS_PER_INCH = 72
+_FOOTER_LABEL = "--- Altro contenuto nella pagina ---"
+
+
+def _ocr_region(image, bbox, scale, psm=None):
+    # bbox is in pdfplumber's top-down point space (same origin as the
+    # rendered image); scale converts points to the image's pixel space.
+    x0, top, x1, bottom = bbox
+    left, upper, right, lower = (round(x0 * scale), round(top * scale), round(x1 * scale), round(bottom * scale))
+    if right <= left or lower <= upper:
+        return ""
+    crop = image.crop((left, upper, right, lower))
+    config = f"--psm {psm}" if psm is not None else ""
+    return pytesseract.image_to_string(_preprocess_for_ocr(crop), lang="ita", config=config).strip()
+
+
+def _reconstruct_table_as_grid(image, table, scale):
+    # Each detected table is OCR'd cell by cell rather than as one page-wide
+    # blob: a single cell is short, unambiguous text, free of the
+    # neighbouring borders/side labels that confuse Tesseract when it has
+    # to interpret an entire tabular layout in one pass.
+    rows_text = []
+    for row in table.rows:
+        # psm 11 ("sparse text") reliably reads a lone short word/value out
+        # of a cell crop; psm 6/7 were observed to return nothing at all on
+        # cell-sized crops despite the same crop OCRing fine unconstrained.
+        cell_texts = [_ocr_region(image, cell_bbox, scale, psm=11) if cell_bbox else "" for cell_bbox in row.cells]
+        rows_text.append(" | ".join(cell_texts))
+    return "\n".join(rows_text)
+
+
+def _ocr_page_with_tables(page, image, scale):
+    tables = page.find_tables()
+    if not tables:
+        return pytesseract.image_to_string(_preprocess_for_ocr(image), lang="ita")
+
+    tables_top_to_bottom = sorted(tables, key=lambda t: t.bbox[1])
+    header_bottom = tables_top_to_bottom[0].bbox[1]
+    footer_top = max(t.bbox[3] for t in tables_top_to_bottom)
+
+    sections = []
+
+    header_text = _ocr_region(image, (0, 0, page.width, header_bottom), scale)
+    if header_text:
+        sections.append(header_text)
+
+    for table in tables_top_to_bottom:
+        sections.append(_reconstruct_table_as_grid(image, table, scale))
+
+    # Content below the lowest table (bank ads, app promos, software vendor
+    # attribution, in every real payslip seen so far) is never discarded --
+    # guessing "irrelevant" on a financial/legal document risks losing
+    # something that matters. It's kept, just clearly set apart from the
+    # reconstructed table data so the two don't visually blend together.
+    footer_text = _ocr_region(image, (0, footer_top, page.width, page.height), scale)
+    if footer_text:
+        sections.append(f"{_FOOTER_LABEL}\n{footer_text}")
+
+    return "\n\n".join(sections)
+
+
 def _ocr_pdf_pages(file_bytes: bytes) -> str:
     # Renders each page to an image and OCRs it -- reads the actual visual
     # glyphs, sidestepping a broken embedded text encoding entirely.
+    scale = _TABLE_RESOLUTION / _POINTS_PER_INCH
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         page_texts = []
         for page in pdf.pages:
-            image = page.to_image(resolution=300).original
-            preprocessed = _preprocess_for_ocr(image)
+            image = page.to_image(resolution=_TABLE_RESOLUTION).original
             # Payslips are Italian documents; the Italian traineddata's
             # language model corrects OCR ambiguities towards Italian
             # vocabulary instead of English.
-            page_texts.append(pytesseract.image_to_string(preprocessed, lang="ita"))
+            page_texts.append(_ocr_page_with_tables(page, image, scale))
     return "\n".join(page_texts)
 
 

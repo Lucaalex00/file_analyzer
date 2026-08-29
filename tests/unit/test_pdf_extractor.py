@@ -2,11 +2,12 @@ import io
 from unittest.mock import MagicMock
 
 import pytest
+from PIL import Image
 from pypdf import PdfWriter
 
 import src.extractors.pdf_extractor as pdf_extractor_module
 from src.extractors.base import ExtractionError
-from src.extractors.pdf_extractor import PdfExtractor, _looks_corrupted, _ocr_pdf_pages
+from src.extractors.pdf_extractor import PdfExtractor, _looks_corrupted, _ocr_pdf_pages, _ocr_region
 
 
 def make_pdf_bytes(pages_text: list[str]) -> bytes:
@@ -157,6 +158,62 @@ class TestLooksCorrupted:
         assert (text.count(" ") / len(text)) >= 0.06
 
         assert _looks_corrupted(text) is True
+
+
+def _build_table_pdf() -> bytes:
+    # A 2x2 table drawn with real vector lines (moveto/lineto/stroke), plus
+    # text above it (header) and below it (footer) -- reproduces the real
+    # payslip layout: anagraphic header, tabular data, vendor/bank footer.
+    stream_content = (
+        b"30 140 m 270 140 l S\n"
+        b"30 100 m 270 100 l S\n"
+        b"30 60 m 270 60 l S\n"
+        b"30 60 m 30 140 l S\n"
+        b"150 60 m 150 140 l S\n"
+        b"270 60 m 270 140 l S\n"
+        b"BT /F1 12 Tf 30 170 Td (Azienda LEVIAHUB) Tj ET\n"
+        b"BT /F1 12 Tf 50 115 Td (AAA) Tj ET\n"
+        b"BT /F1 12 Tf 170 115 Td (BBB) Tj ET\n"
+        b"BT /F1 12 Tf 50 75 Td (CCC) Tj ET\n"
+        b"BT /F1 12 Tf 170 75 Td (DDD) Tj ET\n"
+        b"BT /F1 12 Tf 30 20 Td (PUBBLICITA IRRILEVANTE) Tj ET\n"
+    )
+    return _build_minimal_pdf(stream_content)
+
+
+class TestOcrRegion:
+    def test_returns_empty_string_for_a_degenerate_zero_area_bbox(self):
+        image = Image.new("RGB", (100, 100), color="white")
+
+        assert _ocr_region(image, (10, 10, 10, 50), scale=1.0) == ""
+        assert _ocr_region(image, (10, 10, 50, 10), scale=1.0) == ""
+
+
+class TestOcrPagesWithTables:
+    def test_reconstructs_header_table_grid_and_sets_footer_apart(self):
+        pdf_bytes = _build_table_pdf()
+
+        result = _ocr_pdf_pages(pdf_bytes).upper()
+
+        assert "LEVIAHUB" in result
+        assert "ALTRO CONTENUTO NELLA PAGINA" in result
+        assert "IRRILEVANTE" in result
+
+        header_pos = result.index("LEVIAHUB")
+        table_row1_pos = result.index("AAA")
+        table_row2_pos = result.index("CCC")
+        footer_label_pos = result.index("ALTRO CONTENUTO NELLA PAGINA")
+        footer_text_pos = result.index("IRRILEVANTE")
+
+        # Header comes first, then the table rows in visual top-to-bottom
+        # order, then the clearly labelled footer section last -- nothing
+        # from the footer is discarded, and nothing gets glued mid-table.
+        assert header_pos < table_row1_pos < table_row2_pos < footer_label_pos < footer_text_pos
+
+        # The two cells of the top table row were OCR'd and joined on the
+        # same grid line, not scattered across the page.
+        row1_line = next(line for line in result.splitlines() if "AAA" in line)
+        assert "BBB" in row1_line
 
 
 class TestOcrPdfPagesReal:
