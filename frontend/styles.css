@@ -121,6 +121,18 @@ button[type="submit"] {
   margin-top: 0.75rem;
 }
 
+#download-markdown-button {
+  display: inline-block;
+  margin-top: 0.75rem;
+  margin-left: 0.75rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
 #history-panel {
   margin-top: 2.5rem;
   border-top: 1px solid var(--border);

@@ -35,3 +35,6 @@ class DocumentAnalysisPipeline:
 
         pdf_bytes = self._report_generator.generate(analysis, original_filename=filename)
         return analysis, pdf_bytes
+
+    def render_markdown(self, analysis: AnalysisResult, filename: str) -> str:
+        return self._report_generator.generate_markdown(analysis, original_filename=filename)

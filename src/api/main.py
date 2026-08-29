@@ -34,10 +34,10 @@ def index() -> FileResponse:
     return FileResponse(_FRONTEND_DIR / "index.html")
 
 
-def _report_filename(original_filename: str) -> str:
+def _report_filename(original_filename: str, extension: str = "pdf") -> str:
     stem = PurePosixPath(original_filename.replace("\\", "/")).stem
     safe_stem = _UNSAFE_FILENAME_CHARS.sub("_", stem) or "report"
-    return f"{safe_stem}-report.pdf"
+    return f"{safe_stem}-report.{extension}"
 
 
 @app.get("/health")
@@ -132,3 +132,34 @@ async def analyze_review(
         "analysis": analysis.model_dump(),
         "pdf_base64": base64.b64encode(pdf_bytes).decode("ascii"),
     }
+
+
+@app.post("/analyze/markdown")
+async def analyze_markdown(
+    file: UploadFile,
+    pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
+) -> Response:
+    settings = get_settings()
+    file_bytes = await _read_within_size_limit(file, settings)
+    filename = file.filename or "upload"
+
+    try:
+        analysis, _ = pipeline.run_with_analysis(
+            file_bytes=file_bytes,
+            filename=filename,
+            content_type=file.content_type,
+        )
+    except UnsupportedFileTypeError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except ExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except AnalysisError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    markdown = pipeline.render_markdown(analysis, filename)
+    report_filename = _report_filename(filename, extension="md")
+    return Response(
+        content=markdown,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{report_filename}"'},
+    )

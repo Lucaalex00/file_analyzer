@@ -9,6 +9,7 @@ const downloadEl = document.getElementById("download-link");
 const extractedTextPanel = document.getElementById("extracted-text-panel");
 const extractedTextEl = document.getElementById("extracted-text");
 const historyListEl = document.getElementById("history-list");
+const downloadMarkdownButton = document.getElementById("download-markdown-button");
 
 const HISTORY_MAX_ENTRIES = 10;
 
@@ -24,6 +25,7 @@ function friendlyErrorMessage(status) {
 }
 
 let lastExtractedText = "";
+let lastAnalyzedFile = null;
 
 function escapeHtml(text) {
   return text
@@ -53,11 +55,43 @@ function resetOutcome() {
   errorEl.hidden = true;
   errorEl.textContent = "";
   resultEl.hidden = true;
+  downloadMarkdownButton.hidden = true;
+  lastAnalyzedFile = null;
   if (previewEl.src) {
     URL.revokeObjectURL(previewEl.src);
     previewEl.src = "";
   }
 }
+
+async function downloadMarkdownReport(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/analyze/markdown", { method: "POST", body: formData });
+  if (!response.ok) {
+    showError(friendlyErrorMessage(response.status));
+    return;
+  }
+
+  const markdown = await response.text();
+  const disposition = response.headers.get("content-disposition") || "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match ? match[1] : FileAnalyzerFilename.reportFilenameFor(file.name).replace(/\.pdf$/, ".md");
+
+  const blob = new Blob([markdown], { type: "text/markdown" });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.setAttribute("download", filename);
+  link.click();
+  URL.revokeObjectURL(objectUrl);
+}
+
+downloadMarkdownButton.addEventListener("click", () => {
+  if (lastAnalyzedFile) {
+    downloadMarkdownReport(lastAnalyzedFile);
+  }
+});
 
 function resetExtractedText() {
   extractedTextPanel.hidden = true;
@@ -136,6 +170,10 @@ function renderHistory() {
     reopenButton.addEventListener("click", () => {
       const blob = base64ToBlob(entry.pdfBase64, "application/pdf");
       showResult(blob, entry.reportFilename);
+      // The original File object isn't stored in history, so the Markdown
+      // re-export (which needs to re-run the pipeline) isn't available here.
+      lastAnalyzedFile = null;
+      downloadMarkdownButton.hidden = true;
     });
     item.appendChild(reopenButton);
 
@@ -209,6 +247,8 @@ form.addEventListener("submit", async (event) => {
     const filename = FileAnalyzerFilename.reportFilenameFor(file.name);
     showResult(blob, filename);
     await addToHistory(file, blob, filename);
+    lastAnalyzedFile = file;
+    downloadMarkdownButton.hidden = false;
 
     if (lastExtractedText) {
       extractedTextEl.innerHTML = highlightRedFlags(lastExtractedText, analysis.red_flags);

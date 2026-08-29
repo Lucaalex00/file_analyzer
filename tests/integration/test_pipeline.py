@@ -77,3 +77,21 @@ def test_run_with_analysis_merges_rule_based_flags_with_llm_flags():
 
     titles = [flag.title for flag in analysis.red_flags]
     assert "Rinnovo automatico" in titles
+
+
+def test_render_markdown_reuses_the_pipelines_report_generator():
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=make_fake_openai_client(), deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, _ = pipeline.run_with_analysis(
+        file_bytes=b"Team, please submit your reports by Friday.",
+        filename="memo.txt",
+        content_type="text/plain",
+    )
+
+    markdown = pipeline.render_markdown(analysis, "memo.txt")
+
+    assert "A short memo reminding the team of a Friday deadline." in markdown

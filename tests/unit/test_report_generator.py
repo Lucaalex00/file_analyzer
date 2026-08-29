@@ -45,6 +45,58 @@ def test_render_html_escapes_llm_supplied_markup():
     assert "<b>doc</b>.txt" not in html
 
 
+def test_generate_markdown_includes_summary_explanation_and_red_flags():
+    analysis = AnalysisResult(
+        detected_context="legal",
+        plain_explanation="This document is a rental agreement.",
+        summary="A one-year lease between landlord and tenant.",
+        red_flags=[
+            RedFlag(
+                title="Early termination penalty",
+                description="Costs two months rent.",
+                severity="high",
+                quote="two months rent",
+            )
+        ],
+    )
+    generator = ReportGenerator()
+
+    markdown = generator.generate_markdown(analysis, original_filename="lease.pdf")
+
+    assert "A one-year lease between landlord and tenant." in markdown
+    assert "This document is a rental agreement." in markdown
+    assert "Early termination penalty" in markdown
+    assert "high" in markdown
+
+
+def test_generate_markdown_escapes_llm_supplied_markup():
+    analysis = AnalysisResult(
+        detected_context="other",
+        plain_explanation="<script>alert(1)</script>",
+        summary="A summary.",
+        red_flags=[],
+    )
+    generator = ReportGenerator()
+
+    markdown = generator.generate_markdown(analysis, original_filename="doc.txt")
+
+    assert "<script>" not in markdown
+
+
+def test_generate_markdown_handles_no_red_flags():
+    analysis = AnalysisResult(
+        detected_context="personal",
+        plain_explanation="A friendly letter.",
+        summary="Short personal note.",
+        red_flags=[],
+    )
+    generator = ReportGenerator()
+
+    markdown = generator.generate_markdown(analysis, original_filename="letter.txt")
+
+    assert "Short personal note." in markdown
+
+
 def test_generate_handles_no_red_flags():
     analysis = AnalysisResult(
         detected_context="personal",

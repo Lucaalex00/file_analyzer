@@ -111,3 +111,50 @@ test("red flags with a matching quote are highlighted in the extracted text", as
   await expect(highlighted).toBeVisible();
   await expect(highlighted).toHaveText("by Friday");
 });
+
+test("the Markdown download button appears after a successful analysis and downloads a .md file", async ({
+  page,
+}) => {
+  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
+
+  await page.route("**/analyze/review", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        analysis: {
+          detected_context: "work",
+          plain_explanation: "A short memo.",
+          summary: "A memo about a deadline.",
+          red_flags: [],
+        },
+        pdf_base64: fakePdfBase64,
+      }),
+    });
+  });
+
+  await page.route("**/analyze/markdown", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/markdown; charset=utf-8",
+      headers: { "content-disposition": 'attachment; filename="memo-report.md"' },
+      body: "# Analysis report\n\nA memo about a deadline.",
+    });
+  });
+
+  await page.goto("/");
+
+  await page.setInputFiles("input[type=file]", {
+    name: "memo.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Team, please submit your reports by Friday."),
+  });
+  await page.getByRole("button", { name: /analizza/i }).click();
+
+  const markdownButton = page.locator("[data-role=download-markdown-button]");
+  await expect(markdownButton).toBeVisible();
+
+  const [download] = await Promise.all([page.waitForEvent("download"), markdownButton.click()]);
+
+  expect(download.suggestedFilename()).toBe("memo-report.md");
+});

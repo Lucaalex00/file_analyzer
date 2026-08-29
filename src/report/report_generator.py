@@ -17,6 +17,7 @@ class ReportGenerator:
             autoescape=True,
         )
         self._template = self._env.get_template("report.html.j2")
+        self._markdown_template = self._env.get_template("report.md.j2")
 
     def render_html(self, analysis: AnalysisResult, original_filename: str) -> str:
         return self._template.render(analysis=analysis, original_filename=original_filename)
@@ -24,3 +25,6 @@ class ReportGenerator:
     def generate(self, analysis: AnalysisResult, original_filename: str) -> bytes:
         html = self.render_html(analysis, original_filename)
         return HTML(string=html).write_pdf()
+
+    def generate_markdown(self, analysis: AnalysisResult, original_filename: str) -> str:
+        return self._markdown_template.render(analysis=analysis, original_filename=original_filename)

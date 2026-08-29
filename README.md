@@ -32,8 +32,8 @@ OpenAI credentials (see [`examples/README.md`](examples/README.md)).
 - Detects whether the document is legal, work-related, or personal
 - Explains it in plain language, summarizes it, and flags anything risky or
   worth a second look
-- Returns everything as one PDF report — nothing is written to disk or a
-  database
+- Returns everything as one PDF report (or Markdown, via `POST /analyze/markdown`)
+  — nothing is written to disk or a database
 
 ## Architecture
 

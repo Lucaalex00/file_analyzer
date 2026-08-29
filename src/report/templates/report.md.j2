@@ -1,0 +1,24 @@
+# Analysis report
+
+Source file: {{ original_filename }} — Detected context: {{ analysis.detected_context }}
+
+## Summary
+
+{{ analysis.summary }}
+
+## Explanation
+
+{{ analysis.plain_explanation }}
+
+## Things to pay attention to
+
+{% if analysis.red_flags -%}
+{% for flag in analysis.red_flags %}
+- **{{ flag.title }}** ({{ flag.severity }}): {{ flag.description }}
+{%- if flag.quote %}
+  > {{ flag.quote }}
+{%- endif %}
+{% endfor %}
+{%- else -%}
+No notable red flags found.
+{%- endif %}
