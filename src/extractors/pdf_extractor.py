@@ -5,6 +5,7 @@ import pdfplumber
 import pytesseract
 
 from src.extractors.base import BaseExtractor, ExtractionError, RawText
+from src.extractors.ocr_utils import preprocess_for_ocr
 
 # Below this space-character density, extracted text is almost certainly
 # corrupted rather than genuinely space-free -- real prose in any language
@@ -37,14 +38,6 @@ def _looks_corrupted(text: str) -> bool:
     return glue_density > _MIN_GLUE_DENSITY
 
 
-def _preprocess_for_ocr(image):
-    # Payslips are dense tables with thin border lines that Tesseract can
-    # misread as stray characters ("[", "|") -- a plain grayscale threshold
-    # removes faint lines and background shading while keeping solid text.
-    grayscale = image.convert("L")
-    return grayscale.point(lambda pixel: 255 if pixel > 150 else 0)
-
-
 _TABLE_RESOLUTION = 300
 _POINTS_PER_INCH = 72
 _FOOTER_LABEL = "--- Altro contenuto nella pagina ---"
@@ -59,7 +52,7 @@ def _ocr_region(image, bbox, scale, psm=None):
         return ""
     crop = image.crop((left, upper, right, lower))
     config = f"--psm {psm}" if psm is not None else ""
-    return pytesseract.image_to_string(_preprocess_for_ocr(crop), lang="ita", config=config).strip()
+    return pytesseract.image_to_string(preprocess_for_ocr(crop), lang="ita", config=config).strip()
 
 
 def _reconstruct_table_as_grid(image, table, scale):
@@ -80,7 +73,7 @@ def _reconstruct_table_as_grid(image, table, scale):
 def _ocr_page_with_tables(page, image, scale):
     tables = page.find_tables()
     if not tables:
-        return pytesseract.image_to_string(_preprocess_for_ocr(image), lang="ita")
+        return pytesseract.image_to_string(preprocess_for_ocr(image), lang="ita")
 
     tables_top_to_bottom = sorted(tables, key=lambda t: t.bbox[1])
     header_bottom = tables_top_to_bottom[0].bbox[1]

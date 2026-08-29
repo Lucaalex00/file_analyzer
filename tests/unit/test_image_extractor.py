@@ -1,4 +1,5 @@
 import io
+from unittest.mock import MagicMock
 
 import pytest
 from PIL import Image, ImageDraw, ImageFont
@@ -56,3 +57,23 @@ class TestExtract:
 
         with pytest.raises(ExtractionError):
             extractor.extract(buffer.getvalue(), "blank.png")
+
+    def test_raises_extraction_error_when_ocr_confidence_is_low(self):
+        # Simulates a logo/decorative graphic: OCR produced *some* text
+        # (otherwise the empty-content check above would already catch it)
+        # but Tesseract's own confidence in it is too low to trust.
+        fake_confidence = MagicMock(return_value=10.0)
+        extractor = ImageExtractor(confidence_fn=fake_confidence)
+        image_bytes = make_image_bytes("HELLO WORLD")
+
+        with pytest.raises(ExtractionError):
+            extractor.extract(image_bytes, "logo.png")
+
+    def test_does_not_raise_when_ocr_confidence_is_high(self):
+        fake_confidence = MagicMock(return_value=90.0)
+        extractor = ImageExtractor(confidence_fn=fake_confidence)
+        image_bytes = make_image_bytes("HELLO WORLD")
+
+        raw = extractor.extract(image_bytes, "scan.png")
+
+        assert "HELLO WORLD" in raw.content.upper()
