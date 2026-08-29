@@ -90,6 +90,19 @@ test("switching the language translates the static UI labels", async ({ page }) 
   await expect(page.getByRole("button", { name: "Analyze" })).toBeVisible();
 });
 
+test("dragging a file over the dropzone shows an active visual state", async ({ page }) => {
+  await page.goto("/");
+  const dropzone = page.locator("#dropzone");
+
+  await expect(dropzone).not.toHaveClass(/dropzone--active/);
+
+  await dropzone.dispatchEvent("dragover", { dataTransfer: await page.evaluateHandle(() => new DataTransfer()) });
+  await expect(dropzone).toHaveClass(/dropzone--active/);
+
+  await dropzone.dispatchEvent("dragleave", { dataTransfer: await page.evaluateHandle(() => new DataTransfer()) });
+  await expect(dropzone).not.toHaveClass(/dropzone--active/);
+});
+
 test("sections are collapsible accordions", async ({ page }) => {
   await mockAnalyzeReview(page);
   await page.goto("/");

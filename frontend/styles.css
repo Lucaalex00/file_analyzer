@@ -76,6 +76,22 @@ body {
   font-size: 1.5rem;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.header-controls__label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.header-controls #language-select {
+  margin-bottom: 0;
+}
+
 #theme-toggle {
   display: flex;
   align-items: center;
@@ -112,12 +128,19 @@ body {
   cursor: pointer;
   margin-bottom: 1rem;
   background: var(--surface);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .dropzone:hover {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
+}
+
+.dropzone.dropzone--active {
+  border-color: var(--accent);
+  border-style: solid;
+  background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
+  transform: scale(1.015);
 }
 
 .dropzone input[type="file"] {

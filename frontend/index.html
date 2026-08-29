@@ -8,7 +8,17 @@
 <body>
   <header class="page-header">
     <h1>File Analyzer</h1>
-    <button type="button" id="theme-toggle" data-role="theme-toggle" title="Cambia tema" aria-label="Cambia tema">🌓</button>
+    <div class="header-controls">
+      <label for="language-select" data-i18n="languageLabel" class="header-controls__label">Lingua della spiegazione</label>
+      <select id="language-select" data-role="language-select">
+        <option value="it" selected>Italiano</option>
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
+      </select>
+      <button type="button" id="theme-toggle" data-role="theme-toggle" title="Cambia tema" aria-label="Cambia tema">🌓</button>
+    </div>
   </header>
 
   <main>
@@ -22,15 +32,6 @@
         <span id="dropzone-text" data-i18n="dropzoneText">Trascina un file qui, o clicca per selezionarlo (.pdf, .txt, .docx, .eml, .png, .jpg, .jpeg, .tiff, .bmp)</span>
         <input id="file-input" type="file" accept=".pdf,.txt,.docx,.eml,.png,.jpg,.jpeg,.tiff,.bmp" required />
       </label>
-
-      <label for="language-select" data-i18n="languageLabel">Lingua della spiegazione</label>
-      <select id="language-select" data-role="language-select">
-        <option value="it" selected>Italiano</option>
-        <option value="en">English</option>
-        <option value="fr">Français</option>
-        <option value="de">Deutsch</option>
-        <option value="es">Español</option>
-      </select>
 
       <button type="submit" data-i18n="analyzeButton">Analizza</button>
     </form>

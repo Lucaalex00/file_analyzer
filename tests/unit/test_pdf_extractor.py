@@ -135,6 +135,28 @@ class TestLooksCorrupted:
         # judging them by the same density threshold would false-positive.
         assert _looks_corrupted("Hello Contract") is False
 
+    def test_detects_glued_words_even_when_diluted_by_normal_prose(self):
+        # Real payslips mix a clean, space-heavy header/footer with a
+        # corrupted table -- the overall space density can stay above the
+        # threshold even though a whole section is unreadable. The glued
+        # Title-Case words (no space, single stray letter) must still be
+        # caught via the lowercase-to-uppercase transition signal.
+        prefix = (
+            "Questo documento contiene diverse informazioni scritte con "
+            "normale spaziatura tra le parole italiane comuni. "
+        )
+        corrupted_section = (
+            "PeriodosDisRetribuzionesCodicesAziendasRagionesSocialesIndirizzosCodicesFiscale"
+        )
+        text = prefix + corrupted_section
+
+        # Sanity check: the diluted whole-text space density alone would
+        # NOT have crossed the old threshold -- proving this needs the
+        # glue-based signal, not just a lower space-density threshold.
+        assert (text.count(" ") / len(text)) >= 0.06
+
+        assert _looks_corrupted(text) is True
+
 
 class TestOcrPdfPagesReal:
     def test_real_ocr_reads_the_rendered_page_content(self):

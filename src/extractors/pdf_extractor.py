@@ -1,4 +1,5 @@
 import io
+import re
 
 import pdfplumber
 import pytesseract
@@ -15,11 +16,25 @@ from src.extractors.base import BaseExtractor, ExtractionError, RawText
 _MIN_SPACE_DENSITY = 0.06
 _MIN_LENGTH_TO_JUDGE = 50
 
+# A document with a corrupted section but otherwise normal, space-heavy
+# content (e.g. a clean header/footer around a broken table) can dilute
+# the overall space density above _MIN_SPACE_DENSITY even though it's
+# unreadable. The reported failure mode always glues a Title-Case word
+# directly onto the next one via the stray character, producing a
+# lowercase-then-uppercase transition with no space in between -- a
+# pattern that almost never occurs in real prose, so its density stays a
+# reliable signal even when the space-density check gets diluted.
+_MIN_GLUE_DENSITY = 0.01
+_LOWER_TO_UPPER_GLUE = re.compile(r"[a-zà-ü][A-ZÀ-Ü]")
+
 
 def _looks_corrupted(text: str) -> bool:
     if len(text) < _MIN_LENGTH_TO_JUDGE:
         return False
-    return (text.count(" ") / len(text)) < _MIN_SPACE_DENSITY
+    if (text.count(" ") / len(text)) < _MIN_SPACE_DENSITY:
+        return True
+    glue_density = len(_LOWER_TO_UPPER_GLUE.findall(text)) / len(text)
+    return glue_density > _MIN_GLUE_DENSITY
 
 
 def _ocr_pdf_pages(file_bytes: bytes) -> str:

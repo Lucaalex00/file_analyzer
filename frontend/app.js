@@ -299,7 +299,16 @@ function handleFileSelected() {
   dropzone.addEventListener(eventName, (event) => event.preventDefault());
 });
 
+dropzone.addEventListener("dragover", () => {
+  dropzone.classList.add("dropzone--active");
+});
+
+dropzone.addEventListener("dragleave", () => {
+  dropzone.classList.remove("dropzone--active");
+});
+
 dropzone.addEventListener("drop", (event) => {
+  dropzone.classList.remove("dropzone--active");
   const droppedFiles = event.dataTransfer?.files;
   if (droppedFiles && droppedFiles.length > 0) {
     fileInput.files = droppedFiles;
