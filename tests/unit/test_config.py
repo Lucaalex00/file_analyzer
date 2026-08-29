@@ -19,6 +19,22 @@ def test_rate_limit_per_minute_uses_env_var_when_set(monkeypatch):
     assert settings.rate_limit_per_minute == 5
 
 
+def test_max_batch_files_defaults_when_env_var_absent(monkeypatch):
+    monkeypatch.delenv("MAX_BATCH_FILES", raising=False)
+
+    settings = Settings()
+
+    assert settings.max_batch_files == 5
+
+
+def test_max_batch_files_uses_env_var_when_set(monkeypatch):
+    monkeypatch.setenv("MAX_BATCH_FILES", "3")
+
+    settings = Settings()
+
+    assert settings.max_batch_files == 3
+
+
 def test_max_file_size_bytes_defaults_when_env_var_is_empty_string(monkeypatch):
     monkeypatch.setenv("MAX_FILE_SIZE_BYTES", "")
 

@@ -10,6 +10,7 @@ class Settings:
         self.azure_openai_api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
         self.max_file_size_bytes = int(os.environ.get("MAX_FILE_SIZE_BYTES") or 10 * 1024 * 1024)
         self.rate_limit_per_minute = int(os.environ.get("RATE_LIMIT_PER_MINUTE") or 20)
+        self.max_batch_files = int(os.environ.get("MAX_BATCH_FILES") or 5)
 
     def validate(self) -> None:
         missing = [

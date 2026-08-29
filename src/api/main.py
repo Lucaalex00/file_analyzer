@@ -3,7 +3,7 @@ import re
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -189,6 +189,53 @@ async def analyze_markdown(
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{report_filename}"'},
     )
+
+
+@app.post("/analyze/batch")
+@limiter.limit(_rate_limit)
+async def analyze_batch(
+    request: Request,
+    files: list[UploadFile] = File(...),
+    language: str = Form("it"),
+    pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
+) -> dict:
+    settings = get_settings()
+
+    if len(files) > settings.max_batch_files:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Batch exceeds the maximum of {settings.max_batch_files} files",
+        )
+
+    results = []
+    for file in files:
+        filename = file.filename or "upload"
+        try:
+            file_bytes = await _read_within_size_limit(file, settings)
+            analysis, pdf_bytes = pipeline.run_with_analysis(
+                file_bytes=file_bytes,
+                filename=filename,
+                content_type=file.content_type,
+                language=language,
+            )
+            results.append(
+                {
+                    "filename": filename,
+                    "status": "ok",
+                    "analysis": analysis.model_dump(),
+                    "pdf_base64": base64.b64encode(pdf_bytes).decode("ascii"),
+                }
+            )
+        except HTTPException as exc:
+            results.append({"filename": filename, "status": "error", "status_code": exc.status_code, "detail": exc.detail})
+        except UnsupportedFileTypeError as exc:
+            results.append({"filename": filename, "status": "error", "status_code": 415, "detail": str(exc)})
+        except ExtractionError as exc:
+            results.append({"filename": filename, "status": "error", "status_code": 422, "detail": str(exc)})
+        except AnalysisError as exc:
+            results.append({"filename": filename, "status": "error", "status_code": 502, "detail": str(exc)})
+
+    return {"results": results}
 
 
 @app.post("/compare")
