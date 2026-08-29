@@ -57,6 +57,19 @@ OpenAI credentials (see [`examples/README.md`](examples/README.md)).
 All of the above accept an optional `language` field (`it` default) and are
 rate-limited per client IP (`RATE_LIMIT_PER_MINUTE`, default 20/minute).
 
+## CLI
+
+The same pipeline also runs without a server, via `src/cli.py`:
+
+```bash
+docker compose run --rm api python -m src.cli extract examples/sample_lease_contract.txt
+docker compose run --rm api python -m src.cli analyze examples/sample_lease_contract.txt --format markdown
+docker compose run --rm api python -m src.cli compare v1.txt v2.txt
+```
+
+`extract` never calls the LLM; `analyze` and `compare` need
+`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` set (same `.env` as the API).
+
 ## Architecture
 
 ```
@@ -78,5 +91,6 @@ make test-frontend-unit  # Node's built-in test runner, no running stack needed
 ## Roadmap
 
 Not yet built: `.msg` (Outlook binary format) email support — `.eml` is
-covered — a standalone CLI, and a real Azure Functions deploy (Bicep already in
-`infra/`, gated behind a manual, explicitly-approved step).
+covered — custom PDF branding/themes, and a real Azure Functions deploy
+(Bicep already in `infra/`, gated behind a manual, explicitly-approved
+step).
