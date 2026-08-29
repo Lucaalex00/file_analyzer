@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from pypdf import PdfWriter
 
+import src.extractors.pdf_extractor as pdf_extractor_module
 from src.extractors.base import ExtractionError
 from src.extractors.pdf_extractor import PdfExtractor, _looks_corrupted, _ocr_pdf_pages
 
@@ -169,6 +170,21 @@ class TestOcrPdfPagesReal:
         result = _ocr_pdf_pages(pdf_content)
 
         assert "HELLO" in result.upper()
+
+    def test_ocr_reads_with_italian_language_pack(self, monkeypatch):
+        # Payslips are Italian documents -- Tesseract's default (English)
+        # language model biases word correction towards English vocabulary,
+        # degrading accuracy on Italian text. Verifies the OCR call actually
+        # requests the Italian traineddata rather than relying on the default.
+        stream_content = b"BT /F1 24 Tf 10 100 Td (HELLO OCR) Tj ET\n"
+        pdf_content = _build_minimal_pdf(stream_content)
+        fake_image_to_string = MagicMock(return_value="")
+        monkeypatch.setattr(pdf_extractor_module.pytesseract, "image_to_string", fake_image_to_string)
+
+        _ocr_pdf_pages(pdf_content)
+
+        fake_image_to_string.assert_called_once()
+        assert fake_image_to_string.call_args.kwargs.get("lang") == "ita"
 
 
 class TestOcrFallback:

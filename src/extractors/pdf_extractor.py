@@ -37,14 +37,26 @@ def _looks_corrupted(text: str) -> bool:
     return glue_density > _MIN_GLUE_DENSITY
 
 
+def _preprocess_for_ocr(image):
+    # Payslips are dense tables with thin border lines that Tesseract can
+    # misread as stray characters ("[", "|") -- a plain grayscale threshold
+    # removes faint lines and background shading while keeping solid text.
+    grayscale = image.convert("L")
+    return grayscale.point(lambda pixel: 255 if pixel > 150 else 0)
+
+
 def _ocr_pdf_pages(file_bytes: bytes) -> str:
     # Renders each page to an image and OCRs it -- reads the actual visual
     # glyphs, sidestepping a broken embedded text encoding entirely.
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         page_texts = []
         for page in pdf.pages:
-            image = page.to_image(resolution=200).original
-            page_texts.append(pytesseract.image_to_string(image))
+            image = page.to_image(resolution=300).original
+            preprocessed = _preprocess_for_ocr(image)
+            # Payslips are Italian documents; the Italian traineddata's
+            # language model corrects OCR ambiguities towards Italian
+            # vocabulary instead of English.
+            page_texts.append(pytesseract.image_to_string(preprocessed, lang="ita"))
     return "\n".join(page_texts)
 
 

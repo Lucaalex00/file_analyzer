@@ -16,7 +16,7 @@ jobs:
       - name: Install system dependencies for WeasyPrint and Tesseract OCR
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info tesseract-ocr
+          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info tesseract-ocr tesseract-ocr-ita
       - name: Install Python dependencies
         run: pip install -r requirements-dev.txt
       - name: Lint
