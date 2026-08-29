@@ -34,6 +34,32 @@ def test_analyze_returns_pdf_on_success():
     assert response.content == b"%PDF-1.4 fake pdf content"
 
 
+def test_analyze_defaults_language_to_italian():
+    fake_pipeline = MagicMock()
+    fake_pipeline.run.return_value = b"%PDF-1.4 fake pdf content"
+    override_pipeline(fake_pipeline)
+
+    client.post("/analyze", files={"file": ("note.txt", b"Hello world", "text/plain")})
+
+    _, kwargs = fake_pipeline.run.call_args
+    assert kwargs["language"] == "it"
+
+
+def test_analyze_passes_through_the_requested_language():
+    fake_pipeline = MagicMock()
+    fake_pipeline.run.return_value = b"%PDF-1.4 fake pdf content"
+    override_pipeline(fake_pipeline)
+
+    client.post(
+        "/analyze",
+        files={"file": ("note.txt", b"Hello world", "text/plain")},
+        data={"language": "fr"},
+    )
+
+    _, kwargs = fake_pipeline.run.call_args
+    assert kwargs["language"] == "fr"
+
+
 def test_analyze_returns_413_when_file_too_large(monkeypatch):
     monkeypatch.setenv("MAX_FILE_SIZE_BYTES", "10")
     from src.api.config import get_settings

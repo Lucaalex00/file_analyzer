@@ -10,6 +10,7 @@ const extractedTextPanel = document.getElementById("extracted-text-panel");
 const extractedTextEl = document.getElementById("extracted-text");
 const historyListEl = document.getElementById("history-list");
 const downloadMarkdownButton = document.getElementById("download-markdown-button");
+const languageSelect = document.getElementById("language-select");
 
 const HISTORY_MAX_ENTRIES = 10;
 
@@ -26,6 +27,7 @@ function friendlyErrorMessage(status) {
 
 let lastExtractedText = "";
 let lastAnalyzedFile = null;
+let extractionPromise = Promise.resolve();
 
 function escapeHtml(text) {
   return text
@@ -66,6 +68,7 @@ function resetOutcome() {
 async function downloadMarkdownReport(file) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("language", languageSelect.value);
 
   const response = await fetch("/analyze/markdown", { method: "POST", body: formData });
   if (!response.ok) {
@@ -200,7 +203,7 @@ function handleFileSelected() {
   const file = fileInput.files[0];
   resetOutcome();
   if (file) {
-    showExtractedTextPreview(file);
+    extractionPromise = showExtractedTextPreview(file);
   } else {
     resetExtractedText();
   }
@@ -233,6 +236,7 @@ form.addEventListener("submit", async (event) => {
 
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("language", languageSelect.value);
 
   try {
     const response = await fetch("/analyze/review", { method: "POST", body: formData });
@@ -250,6 +254,7 @@ form.addEventListener("submit", async (event) => {
     lastAnalyzedFile = file;
     downloadMarkdownButton.hidden = false;
 
+    await extractionPromise; // ensure /extract has resolved before using its result
     if (lastExtractedText) {
       extractedTextEl.innerHTML = highlightRedFlags(lastExtractedText, analysis.red_flags);
     }

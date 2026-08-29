@@ -79,6 +79,26 @@ def test_run_with_analysis_merges_rule_based_flags_with_llm_flags():
     assert "Rinnovo automatico" in titles
 
 
+def test_run_with_analysis_passes_the_requested_language_to_the_analyzer():
+    client = make_fake_openai_client()
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=client, deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    pipeline.run_with_analysis(
+        file_bytes=b"Team, please submit your reports by Friday.",
+        filename="memo.txt",
+        content_type="text/plain",
+        language="fr",
+    )
+
+    _, kwargs = client.chat.completions.create.call_args
+    user_message = next(m for m in kwargs["messages"] if m["role"] == "user")
+    assert "French" in user_message["content"]
+
+
 def test_render_markdown_reuses_the_pipelines_report_generator():
     pipeline = DocumentAnalysisPipeline(
         factory=ExtractorFactory(),

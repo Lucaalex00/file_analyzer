@@ -51,6 +51,27 @@ def test_analyze_review_returns_analysis_and_base64_pdf():
     assert base64.b64decode(body["pdf_base64"]) == b"%PDF-1.4 fake pdf content"
 
 
+def test_analyze_review_passes_through_the_requested_language():
+    fake_analysis = AnalysisResult(
+        detected_context="legal",
+        plain_explanation="explanation",
+        summary="summary",
+        red_flags=[],
+    )
+    fake_pipeline = MagicMock()
+    fake_pipeline.run_with_analysis.return_value = (fake_analysis, b"%PDF-1.4 fake pdf content")
+    override_pipeline(fake_pipeline)
+
+    client.post(
+        "/analyze/review",
+        files={"file": ("lease.txt", b"Some lease text", "text/plain")},
+        data={"language": "es"},
+    )
+
+    _, kwargs = fake_pipeline.run_with_analysis.call_args
+    assert kwargs["language"] == "es"
+
+
 def test_analyze_review_returns_415_for_unsupported_file_type():
     fake_pipeline = MagicMock()
     fake_pipeline.run_with_analysis.side_effect = UnsupportedFileTypeError("no extractor for .png")

@@ -36,6 +36,21 @@ body {
   margin: 1rem auto 0;
 }
 
+#analyze-form label[for="language-select"] {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+#language-select {
+  display: block;
+  margin-bottom: 1rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
 button[type="submit"] {
   background: var(--accent);
   color: #fff;

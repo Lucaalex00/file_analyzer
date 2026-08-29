@@ -46,6 +46,22 @@ def test_analyze_markdown_returns_markdown_with_download_filename():
     assert response.text == "# Analysis report\n\nA one-year lease."
 
 
+def test_analyze_markdown_passes_through_the_requested_language():
+    fake_pipeline = MagicMock()
+    fake_pipeline.run_with_analysis.return_value = (make_fake_analysis(), b"%PDF-1.4 unused")
+    fake_pipeline.render_markdown.return_value = "# Analysis report"
+    override_pipeline(fake_pipeline)
+
+    client.post(
+        "/analyze/markdown",
+        files={"file": ("lease.txt", b"Some lease text", "text/plain")},
+        data={"language": "de"},
+    )
+
+    _, kwargs = fake_pipeline.run_with_analysis.call_args
+    assert kwargs["language"] == "de"
+
+
 def test_analyze_markdown_returns_415_for_unsupported_file_type():
     fake_pipeline = MagicMock()
     fake_pipeline.run_with_analysis.side_effect = UnsupportedFileTypeError("no extractor for .png")

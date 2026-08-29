@@ -16,16 +16,18 @@ class DocumentAnalysisPipeline:
         self._analyzer = analyzer
         self._report_generator = report_generator
 
-    def run(self, file_bytes: bytes, filename: str, content_type: str | None) -> bytes:
-        _, pdf_bytes = self.run_with_analysis(file_bytes, filename, content_type)
+    def run(
+        self, file_bytes: bytes, filename: str, content_type: str | None, language: str = "it"
+    ) -> bytes:
+        _, pdf_bytes = self.run_with_analysis(file_bytes, filename, content_type, language=language)
         return pdf_bytes
 
     def run_with_analysis(
-        self, file_bytes: bytes, filename: str, content_type: str | None
+        self, file_bytes: bytes, filename: str, content_type: str | None, language: str = "it"
     ) -> tuple[AnalysisResult, bytes]:
         extractor = self._factory.get_extractor(filename, content_type)
         raw_text = extractor.extract(file_bytes, filename)
-        analysis = self._analyzer.analyze(raw_text)
+        analysis = self._analyzer.analyze(raw_text, language=language)
 
         rule_based_flags = detect_rule_based_flags(raw_text.content)
         existing_titles = {flag.title for flag in analysis.red_flags}

@@ -15,7 +15,7 @@ class DocumentAnalyzer:
         self._deployment = deployment
         self._max_retries = max_retries
 
-    def analyze(self, raw_text: RawText) -> AnalysisResult:
+    def analyze(self, raw_text: RawText, language: str = "it") -> AnalysisResult:
         last_error: Exception | None = None
 
         for attempt in range(self._max_retries + 1):
@@ -25,7 +25,7 @@ class DocumentAnalyzer:
                     response_format={"type": "json_object"},
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": build_user_prompt(raw_text.content)},
+                        {"role": "user", "content": build_user_prompt(raw_text.content, language=language)},
                     ],
                 )
                 content = completion.choices[0].message.content

@@ -3,7 +3,7 @@ import re
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -81,6 +81,7 @@ async def extract(
 @app.post("/analyze")
 async def analyze(
     file: UploadFile,
+    language: str = Form("it"),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
 ) -> Response:
     settings = get_settings()
@@ -91,6 +92,7 @@ async def analyze(
             file_bytes=file_bytes,
             filename=file.filename or "upload",
             content_type=file.content_type,
+            language=language,
         )
     except UnsupportedFileTypeError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
@@ -110,6 +112,7 @@ async def analyze(
 @app.post("/analyze/review")
 async def analyze_review(
     file: UploadFile,
+    language: str = Form("it"),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
 ) -> dict:
     settings = get_settings()
@@ -120,6 +123,7 @@ async def analyze_review(
             file_bytes=file_bytes,
             filename=file.filename or "upload",
             content_type=file.content_type,
+            language=language,
         )
     except UnsupportedFileTypeError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
@@ -137,6 +141,7 @@ async def analyze_review(
 @app.post("/analyze/markdown")
 async def analyze_markdown(
     file: UploadFile,
+    language: str = Form("it"),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
 ) -> Response:
     settings = get_settings()
@@ -148,6 +153,7 @@ async def analyze_markdown(
             file_bytes=file_bytes,
             filename=filename,
             content_type=file.content_type,
+            language=language,
         )
     except UnsupportedFileTypeError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc

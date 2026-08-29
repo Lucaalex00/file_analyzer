@@ -31,6 +31,21 @@ with JSON only, no other text."""
 # a plain truncation is enough for this MVP.
 MAX_DOCUMENT_CHARS = 80_000
 
+_LANGUAGE_NAMES = {
+    "it": "Italian",
+    "en": "English",
+    "fr": "French",
+    "de": "German",
+    "es": "Spanish",
+}
 
-def build_user_prompt(document_text: str) -> str:
-    return f"Analyze the following document:\n\n{document_text[:MAX_DOCUMENT_CHARS]}"
+
+def build_user_prompt(document_text: str, language: str = "it") -> str:
+    language_name = _LANGUAGE_NAMES.get(language, language)
+    truncated = document_text[:MAX_DOCUMENT_CHARS]
+    return (
+        f"Respond in {language_name} for plain_explanation, summary, and each red flag's "
+        "title/description. detected_context, severity, and quote are not translated "
+        f"(quote must stay verbatim in the document's own language).\n\n"
+        f"Analyze the following document:\n\n{truncated}"
+    )
