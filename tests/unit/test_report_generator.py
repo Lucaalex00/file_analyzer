@@ -20,6 +20,30 @@ def test_generate_returns_non_empty_pdf_bytes():
     assert len(pdf_bytes) > 500
 
 
+def test_render_html_uses_the_default_brand_name_and_accent_color():
+    analysis = AnalysisResult(
+        detected_context="personal", plain_explanation="e", summary="s", red_flags=[]
+    )
+    generator = ReportGenerator()
+
+    html = generator.render_html(analysis, original_filename="letter.txt")
+
+    assert "File Analyzer" in html
+    assert "#2563eb" in html
+
+
+def test_render_html_uses_a_custom_brand_name_and_accent_color():
+    analysis = AnalysisResult(
+        detected_context="personal", plain_explanation="e", summary="s", red_flags=[]
+    )
+    generator = ReportGenerator(brand_name="Acme Reports", accent_color="#00aa55")
+
+    html = generator.render_html(analysis, original_filename="letter.txt")
+
+    assert "Acme Reports" in html
+    assert "#00aa55" in html
+
+
 def test_render_html_escapes_llm_supplied_markup():
     analysis = AnalysisResult(
         detected_context="other",
@@ -81,6 +105,15 @@ def test_generate_markdown_escapes_llm_supplied_markup():
     markdown = generator.generate_markdown(analysis, original_filename="doc.txt")
 
     assert "<script>" not in markdown
+
+
+def test_generate_markdown_includes_the_brand_name():
+    analysis = AnalysisResult(detected_context="work", plain_explanation="e", summary="s", red_flags=[])
+    generator = ReportGenerator(brand_name="Acme Reports")
+
+    markdown = generator.generate_markdown(analysis, original_filename="memo.txt")
+
+    assert "Acme Reports" in markdown
 
 
 def test_generate_markdown_handles_no_red_flags():

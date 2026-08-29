@@ -35,6 +35,26 @@ def test_max_batch_files_uses_env_var_when_set(monkeypatch):
     assert settings.max_batch_files == 3
 
 
+def test_report_branding_defaults_when_env_vars_absent(monkeypatch):
+    monkeypatch.delenv("REPORT_BRAND_NAME", raising=False)
+    monkeypatch.delenv("REPORT_ACCENT_COLOR", raising=False)
+
+    settings = Settings()
+
+    assert settings.report_brand_name == "File Analyzer"
+    assert settings.report_accent_color == "#2563eb"
+
+
+def test_report_branding_uses_env_vars_when_set(monkeypatch):
+    monkeypatch.setenv("REPORT_BRAND_NAME", "Acme Reports")
+    monkeypatch.setenv("REPORT_ACCENT_COLOR", "#00aa55")
+
+    settings = Settings()
+
+    assert settings.report_brand_name == "Acme Reports"
+    assert settings.report_accent_color == "#00aa55"
+
+
 def test_max_file_size_bytes_defaults_when_env_var_is_empty_string(monkeypatch):
     monkeypatch.setenv("MAX_FILE_SIZE_BYTES", "")
 

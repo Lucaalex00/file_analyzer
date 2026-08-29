@@ -11,6 +11,8 @@ class Settings:
         self.max_file_size_bytes = int(os.environ.get("MAX_FILE_SIZE_BYTES") or 10 * 1024 * 1024)
         self.rate_limit_per_minute = int(os.environ.get("RATE_LIMIT_PER_MINUTE") or 20)
         self.max_batch_files = int(os.environ.get("MAX_BATCH_FILES") or 5)
+        self.report_brand_name = os.environ.get("REPORT_BRAND_NAME") or "File Analyzer"
+        self.report_accent_color = os.environ.get("REPORT_ACCENT_COLOR") or "#2563eb"
 
     def validate(self) -> None:
         missing = [

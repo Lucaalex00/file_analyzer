@@ -41,9 +41,15 @@ def get_document_comparator() -> DocumentComparator:
 
 
 @lru_cache
+def get_report_generator() -> ReportGenerator:
+    settings = get_settings()
+    return ReportGenerator(brand_name=settings.report_brand_name, accent_color=settings.report_accent_color)
+
+
+@lru_cache
 def get_pipeline() -> DocumentAnalysisPipeline:
     return DocumentAnalysisPipeline(
         factory=ExtractorFactory(),
         analyzer=get_document_analyzer(),
-        report_generator=ReportGenerator(),
+        report_generator=get_report_generator(),
     )
