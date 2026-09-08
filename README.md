@@ -10,13 +10,13 @@ stored: the file exists only for the duration of the request.
 ## Quick start — one command, no setup
 
 ```bash
-docker run -d --name file-analyzer -p "${HOST_PORT:-8000}:8000" ghcr.io/lucaalex00/file_analyzer:latest
+docker run -d --name file-analyzer -p 8000:8000 ghcr.io/lucaalex00/file_analyzer:latest
 ```
 
-Open http://localhost:8000 (or `http://localhost:$HOST_PORT` if you set
-one — the container's own port is always 8000, only the host side is
-configurable, in case 8000 is already taken on your machine). No
-credentials, no `.env`, no clone needed.
+Open http://localhost:8000. No credentials, no `.env`, no clone needed.
+If port 8000 is already taken on your machine, change the first `8000`
+only (e.g. `-p 3000:8000`, then open `localhost:3000` instead) — the
+second `8000` is the container's own port and must stay as-is.
 
 Run this exact command, not Docker Desktop's "Run" button on the image —
 the GUI defaults to an auto-generated container name and a random host
