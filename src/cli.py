@@ -5,9 +5,11 @@ Usage:
     python -m src.cli analyze contract.pdf --language en --format markdown
     python -m src.cli compare v1.txt v2.txt
 
-Requires the same environment variables as the API (see .env.example) --
-at minimum AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY for `analyze`
-and `compare` (`extract` needs neither, it never calls the LLM).
+Uses the same environment variables as the API (see .env.example).
+`extract` never calls the LLM. `analyze` and `compare` fall back to demo
+mode (a simulated explanation, real rule-based red flags) when
+AZURE_OPENAI_ENDPOINT/AZURE_OPENAI_API_KEY aren't set -- set both for a
+real AI-written explanation instead.
 """
 
 import argparse

@@ -2,7 +2,9 @@ services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      # Host-side port is configurable (HOST_PORT env var, default 8000) --
+      # the container's own port stays 8000 regardless.
+      - "${HOST_PORT:-8000}:8000"
     # No .env file is required to start: with no Azure OpenAI credentials
     # set, the app runs in demo mode (see src/api/config.py). If a .env
     # file exists next to this compose file, Docker Compose loads it

@@ -10,10 +10,13 @@ stored: the file exists only for the duration of the request.
 ## Quick start — one command, no setup
 
 ```bash
-docker run -d -p 8000:8000 ghcr.io/lucaalex00/file_analyzer:latest
+docker run -d -p "${HOST_PORT:-8000}:8000" ghcr.io/lucaalex00/file_analyzer:latest
 ```
 
-Open http://localhost:8000 — no credentials, no `.env`, no clone needed.
+Open http://localhost:8000 (or `http://localhost:$HOST_PORT` if you set
+one — the container's own port is always 8000, only the host side is
+configurable, in case 8000 is already taken on your machine). No
+credentials, no `.env`, no clone needed.
 With no Azure OpenAI key configured, the app runs in **demo mode**: every
 part of the pipeline (extraction, PDF/OCR handling, rule-based red flags,
 PDF report generation) is real, only the AI-written explanation is
@@ -80,8 +83,10 @@ docker compose run --rm api python -m src.cli analyze examples/sample_lease_cont
 docker compose run --rm api python -m src.cli compare v1.txt v2.txt
 ```
 
-`extract` never calls the LLM; `analyze` and `compare` need
-`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` set (same `.env` as the API).
+`extract` never calls the LLM. `analyze` and `compare` use the same
+demo-mode fallback as the API: with no `AZURE_OPENAI_ENDPOINT`/
+`AZURE_OPENAI_API_KEY` set (same `.env` as the API), they still run end
+to end with a simulated explanation instead of erroring out.
 
 ## Architecture
 

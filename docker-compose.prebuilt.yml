@@ -5,4 +5,4 @@ services:
     command: !reset null
     volumes: !reset []
     ports:
-      - "8000:8000"
+      - "${HOST_PORT:-8000}:8000"
