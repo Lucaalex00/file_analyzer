@@ -88,6 +88,34 @@ make test-e2e            # Playwright, against the running stack (run `make up` 
 make test-frontend-unit  # Node's built-in test runner, no running stack needed
 ```
 
+## Limitations
+
+- **OCR on non-document images** (logos, decorative graphics, stylized
+  flyers) is unreliable. Images with no reliably readable text are rejected
+  with a clear error rather than analyzed; images with real text in a
+  decorative layout may still OCR poorly — there's no fix for this beyond
+  what Tesseract itself can do.
+- **PDF table reconstruction** only kicks in when pdfplumber detects real
+  vector-drawn table lines in the source PDF. Tables built from other
+  visual cues (dotted rules, background shading, pure text alignment)
+  fall back to whole-page OCR, which reads less cleanly.
+- **No persistent server-side storage.** History lives in the browser's
+  `localStorage` only — clearing site data or switching browsers loses it.
+  There is no server-side record of past analyses.
+- **Prompt injection defenses are heuristic, not exhaustive.** The system
+  prompt is hardened and a rule-based detector flags common
+  injection-style phrases (in English and Italian), but a sufficiently
+  novel or obfuscated attempt could still evade detection. Detection is
+  a visible red flag, not a hard block — the document is still analyzed.
+- **No fallback AI provider.** If Azure OpenAI is unreachable, the
+  analyzer retries transient failures a couple of times, then fails the
+  whole request — rule-based red flags are not offered as a degraded
+  standalone mode.
+- **Rate limiting is process-local**, not distributed. It resets per
+  process and doesn't coordinate across multiple running instances.
+- **Language support is a fixed list** (it/en/fr/de/es) with no
+  auto-detection of the source document's language.
+
 ## Roadmap
 
 Not yet built: `.msg` (Outlook binary format) email support — `.eml` is

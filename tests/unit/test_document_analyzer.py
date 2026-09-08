@@ -42,13 +42,22 @@ class TestBuildUserPrompt:
     def test_truncates_over_long_documents(self):
         prompt = build_user_prompt("x" * (MAX_DOCUMENT_CHARS + 5_000))
 
-        assert prompt.endswith("x" * MAX_DOCUMENT_CHARS)
-        assert not prompt.endswith("x" * (MAX_DOCUMENT_CHARS + 1))
+        assert ("x" * MAX_DOCUMENT_CHARS) in prompt
+        assert ("x" * (MAX_DOCUMENT_CHARS + 1)) not in prompt
 
     def test_keeps_short_documents_intact(self):
         prompt = build_user_prompt("short document")
 
-        assert prompt.endswith("short document")
+        assert "short document" in prompt
+
+    def test_wraps_the_document_text_in_delimiter_tags(self):
+        # A clear boundary between instructions and untrusted document
+        # content is a basic prompt-injection mitigation.
+        prompt = build_user_prompt("some document text")
+
+        assert "<document>" in prompt
+        assert "</document>" in prompt
+        assert prompt.index("<document>") < prompt.index("some document text") < prompt.index("</document>")
 
     def test_defaults_to_italian_when_no_language_given(self):
         prompt = build_user_prompt("short document")
