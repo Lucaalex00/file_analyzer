@@ -5,6 +5,8 @@ plain-language explanation, a summary, and a list of things worth paying
 attention to, as a downloadable PDF report. No account, no database, nothing
 stored: the file exists only for the duration of the request.
 
+![Uploading a lease, reviewing the extracted text, and getting a plain-language analysis with red flags](docs/screenshots/demo.gif)
+
 ## Quick start
 
 ```bash
@@ -87,6 +89,13 @@ make lint                # ruff
 make test-e2e            # Playwright, against the running stack (run `make up` first)
 make test-frontend-unit  # Node's built-in test runner, no running stack needed
 ```
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Home page, empty upload state](docs/screenshots/01-home.png) Upload form, before any file is selected | ![Extracted text preview](docs/screenshots/02-extracted-preview.png) Extracted text preview, shown before submitting |
+| ![Analysis result with highlighted red flags](docs/screenshots/03-analysis-result.png) Plain-language analysis, with matched red flags highlighted in the source text | ![Dark theme](docs/screenshots/04-dark-theme.png) The same view in dark mode |
 
 ## Limitations
 
