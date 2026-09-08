@@ -17,10 +17,17 @@ Open http://localhost:8000 (or `http://localhost:$HOST_PORT` if you set
 one — the container's own port is always 8000, only the host side is
 configurable, in case 8000 is already taken on your machine). No
 credentials, no `.env`, no clone needed.
+
+This one container **is the whole app** — extract, analyze, compare,
+batch, PDF/Markdown export, the web UI, all of it. There's no separate
+image or service per feature to combine: every endpoint in the
+[API table below](#api) is just a different route on this same running
+container.
+
 With no Azure OpenAI key configured, the app runs in **demo mode**: every
 part of the pipeline (extraction, PDF/OCR handling, rule-based red flags,
-PDF report generation) is real, only the AI-written explanation is
-simulated and clearly labeled as such, both in the response and in a
+PDF report generation) is real, only the AI-written explanation/comparison
+is simulated and clearly labeled as such, both in the response and in a
 banner in the UI. Try it with a file from [`examples/`](examples/), or any
 `.pdf`/`.txt`/`.docx`/`.eml`/image of your own.
 
