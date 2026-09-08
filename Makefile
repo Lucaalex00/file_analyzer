@@ -10,9 +10,9 @@ env: ## Create a .env from .env.example (does nothing if .env already exists)
 up: ## Build and start the API (http://localhost:8000)
 	docker compose up --build
 
-demo: ## Start the API from the CI-published image — no local build
+demo: ## Start the API from the CI-published image, no local build, no credentials needed (demo mode)
 	docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
-	@echo "API http://localhost:8000"
+	@echo "API http://localhost:8000 (demo mode unless AZURE_OPENAI_* is set in .env)"
 
 down: ## Stop the stack
 	docker compose down

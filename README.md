@@ -7,7 +7,21 @@ stored: the file exists only for the duration of the request.
 
 ![Uploading a lease, reviewing the extracted text, and getting a plain-language analysis with red flags](docs/screenshots/demo.gif)
 
-## Quick start
+## Quick start — one command, no setup
+
+```bash
+docker run -d -p 8000:8000 ghcr.io/lucaalex00/file_analyzer:latest
+```
+
+Open http://localhost:8000 — no credentials, no `.env`, no clone needed.
+With no Azure OpenAI key configured, the app runs in **demo mode**: every
+part of the pipeline (extraction, PDF/OCR handling, rule-based red flags,
+PDF report generation) is real, only the AI-written explanation is
+simulated and clearly labeled as such, both in the response and in a
+banner in the UI. Try it with a file from [`examples/`](examples/), or any
+`.pdf`/`.txt`/`.docx`/`.eml`/image of your own.
+
+To run it with a real Azure OpenAI model instead of demo mode:
 
 ```bash
 git clone https://github.com/Lucaalex00/file_analyzer.git && cd file_analyzer
@@ -15,18 +29,15 @@ make env    # creates .env — fill in your Azure OpenAI credentials
 make up     # builds and starts the API at http://localhost:8000
 ```
 
-Then open http://localhost:8000 in a browser: drag a file in, click Analyze,
-and the report shows up inline with a download link.
-
 Or try it from the command line:
 
 ```bash
 curl -F "file=@examples/sample_lease_contract.txt" http://localhost:8000/analyze -o report.pdf
 ```
 
-See [`examples/`](examples/) for sample input files. Report PDFs are generated
-on demand — run `python scripts/generate_examples.py` with your own Azure
-OpenAI credentials (see [`examples/README.md`](examples/README.md)).
+Report PDFs in [`examples/`](examples/) are generated on demand — run
+`python scripts/generate_examples.py` with your own Azure OpenAI
+credentials (see [`examples/README.md`](examples/README.md)).
 
 ## What it does
 

@@ -114,6 +114,16 @@ body {
   transform: rotate(15deg);
 }
 
+#demo-banner {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .subtitle {
   color: var(--muted);
   line-height: 1.5;

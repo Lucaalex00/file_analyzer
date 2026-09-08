@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from openai import AzureOpenAI
 
+from src.analyzer.demo_client import DemoAIClient
 from src.analyzer.document_analyzer import DocumentAnalyzer
 from src.analyzer.document_comparator import DocumentComparator
 from src.api.config import get_settings
@@ -15,8 +16,10 @@ def get_extractor_factory() -> ExtractorFactory:
     return ExtractorFactory()
 
 
-def _build_azure_client() -> AzureOpenAI:
+def _build_ai_client():
     settings = get_settings()
+    if settings.is_demo_mode:
+        return DemoAIClient()
     return AzureOpenAI(
         azure_endpoint=settings.azure_openai_endpoint,
         api_key=settings.azure_openai_api_key,
@@ -31,13 +34,13 @@ def _build_azure_client() -> AzureOpenAI:
 @lru_cache
 def get_document_analyzer() -> DocumentAnalyzer:
     settings = get_settings()
-    return DocumentAnalyzer(client=_build_azure_client(), deployment=settings.azure_openai_deployment)
+    return DocumentAnalyzer(client=_build_ai_client(), deployment=settings.azure_openai_deployment)
 
 
 @lru_cache
 def get_document_comparator() -> DocumentComparator:
     settings = get_settings()
-    return DocumentComparator(client=_build_azure_client(), deployment=settings.azure_openai_deployment)
+    return DocumentComparator(client=_build_ai_client(), deployment=settings.azure_openai_deployment)
 
 
 @lru_cache

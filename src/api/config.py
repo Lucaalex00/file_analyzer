@@ -14,17 +14,13 @@ class Settings:
         self.report_brand_name = os.environ.get("REPORT_BRAND_NAME") or "File Analyzer"
         self.report_accent_color = os.environ.get("REPORT_ACCENT_COLOR") or "#2563eb"
 
-    def validate(self) -> None:
-        missing = [
-            name
-            for name, value in (
-                ("AZURE_OPENAI_ENDPOINT", self.azure_openai_endpoint),
-                ("AZURE_OPENAI_API_KEY", self.azure_openai_api_key),
-            )
-            if not value
-        ]
-        if missing:
-            raise ValueError(f"Missing required settings: {', '.join(missing)}")
+    @property
+    def is_demo_mode(self) -> bool:
+        # No real Azure OpenAI credentials configured: the app still starts
+        # and every endpoint still works, but the analyzer/comparator use a
+        # simulated client (src/analyzer/demo_client.py) instead of erroring
+        # out -- a `docker run` with zero setup is always demoable.
+        return not (self.azure_openai_endpoint and self.azure_openai_api_key)
 
 
 @lru_cache

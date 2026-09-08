@@ -3,8 +3,16 @@ services:
     build: .
     ports:
       - "8000:8000"
-    env_file:
-      - .env
+    # No .env file is required to start: with no Azure OpenAI credentials
+    # set, the app runs in demo mode (see src/api/config.py). If a .env
+    # file exists next to this compose file, Docker Compose loads it
+    # automatically for the ${...} substitutions below -- no env_file:
+    # directive needed, which would otherwise make the file mandatory.
+    environment:
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-gpt-4o-mini}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-08-01-preview}
     volumes:
       - ./src:/app/src
       - ./frontend:/app/frontend

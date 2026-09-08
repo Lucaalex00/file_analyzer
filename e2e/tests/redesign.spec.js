@@ -90,6 +90,24 @@ test("switching the language translates the static UI labels", async ({ page }) 
   await expect(page.getByRole("button", { name: "Analyze" })).toBeVisible();
 });
 
+test("shows a demo mode banner when the backend reports demo_mode", async ({ page }) => {
+  await page.route("**/health", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "ok", demo_mode: true }) });
+  });
+  await page.goto("/");
+
+  await expect(page.locator("[data-role=demo-banner]")).toBeVisible();
+});
+
+test("hides the demo mode banner when the backend reports no demo mode", async ({ page }) => {
+  await page.route("**/health", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "ok", demo_mode: false }) });
+  });
+  await page.goto("/");
+
+  await expect(page.locator("[data-role=demo-banner]")).toBeHidden();
+});
+
 test("dragging a file over the dropzone shows an active visual state", async ({ page }) => {
   await page.goto("/");
   const dropzone = page.locator("#dropzone");

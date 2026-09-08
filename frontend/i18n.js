@@ -37,6 +37,7 @@
       err429: "Troppe richieste, riprova tra poco.",
       errGeneric: "Si è verificato un errore imprevisto durante l'analisi.",
       errNetwork: "Impossibile contattare il servizio di analisi.",
+      demoModeBanner: "Modalità demo: nessuna credenziale AI configurata. Le spiegazioni sono simulate; i punti di attenzione sono reali.",
     },
     en: {
       subtitle:
@@ -67,6 +68,7 @@
       err429: "Too many requests, please try again shortly.",
       errGeneric: "An unexpected error occurred during analysis.",
       errNetwork: "Could not reach the analysis service.",
+      demoModeBanner: "Demo mode: no AI credentials configured. Explanations are simulated; red flags are real.",
     },
     fr: {
       subtitle:
@@ -97,6 +99,7 @@
       err429: "Trop de requêtes, réessayez bientôt.",
       errGeneric: "Une erreur inattendue s'est produite lors de l'analyse.",
       errNetwork: "Impossible de contacter le service d'analyse.",
+      demoModeBanner: "Mode démo : aucune information d'identification AI configurée. Les explications sont simulées ; les points d'attention sont réels.",
     },
     de: {
       subtitle:
@@ -127,6 +130,7 @@
       err429: "Zu viele Anfragen, bitte versuchen Sie es später erneut.",
       errGeneric: "Bei der Analyse ist ein unerwarteter Fehler aufgetreten.",
       errNetwork: "Der Analysedienst konnte nicht erreicht werden.",
+      demoModeBanner: "Demo-Modus: keine AI-Zugangsdaten konfiguriert. Erklärungen sind simuliert; Warnhinweise sind echt.",
     },
     es: {
       subtitle:
@@ -157,6 +161,7 @@
       err429: "Demasiadas solicitudes, inténtalo de nuevo en breve.",
       errGeneric: "Se produjo un error inesperado durante el análisis.",
       errNetwork: "No se pudo contactar con el servicio de análisis.",
+      demoModeBanner: "Modo demo: no hay credenciales de IA configuradas. Las explicaciones son simuladas; los puntos de atención son reales.",
     },
   };
 

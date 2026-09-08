@@ -17,6 +17,7 @@ const analysisContextEl = document.querySelector("[data-role=analysis-context]")
 const analysisSummaryEl = document.querySelector("[data-role=analysis-summary]");
 const analysisExplanationEl = document.querySelector("[data-role=analysis-explanation]");
 const analysisRedFlagsEl = document.querySelector("[data-role=analysis-red-flags]");
+const demoBannerEl = document.getElementById("demo-banner");
 
 const HISTORY_MAX_ENTRIES = 10;
 const THEME_STORAGE_KEY = "file-analyzer-theme";
@@ -362,6 +363,20 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+async function checkDemoMode() {
+  try {
+    const response = await fetch("/health");
+    if (!response.ok) {
+      return;
+    }
+    const { demo_mode: demoMode } = await response.json();
+    demoBannerEl.hidden = !demoMode;
+  } catch (networkError) {
+    // Best-effort only: not knowing demo status shouldn't block the page.
+  }
+}
+
 initTheme();
 applyLanguageToUI();
 renderHistory();
+checkDemoMode();
