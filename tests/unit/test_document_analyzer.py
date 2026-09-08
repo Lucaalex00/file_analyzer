@@ -1,4 +1,5 @@
 import json
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -145,3 +146,53 @@ class TestAnalyze:
 
         assert result.detected_context == "legal"
         assert client.chat.completions.create.call_count == 2
+
+
+class TestTracing:
+    def test_logs_one_success_record_on_the_happy_path(self, caplog):
+        client = make_client(response_content=VALID_RESPONSE_JSON)
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini")
+        raw_text = RawText(content="Lease agreement text with sensitive names...", source_filename="lease.pdf")
+
+        with caplog.at_level(logging.INFO, logger="file_analyzer.ai"):
+            analyzer.analyze(raw_text)
+
+        records = [r for r in caplog.records if r.name == "file_analyzer.ai"]
+        assert len(records) == 1
+        assert records[0].ai_component == "document_analyzer"
+        assert records[0].ai_outcome == "success"
+        assert records[0].ai_attempt == 1
+        # The document content must never end up in a log line.
+        assert "sensitive names" not in caplog.text
+
+    def test_logs_a_record_per_attempt_including_the_retry(self, caplog):
+        client = MagicMock()
+        message = MagicMock()
+        message.content = VALID_RESPONSE_JSON
+        choice = MagicMock()
+        choice.message = message
+        completion = MagicMock()
+        completion.choices = [choice]
+        client.chat.completions.create.side_effect = [RuntimeError("timeout"), completion]
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
+        raw_text = RawText(content="text", source_filename="doc.txt")
+
+        with caplog.at_level(logging.INFO, logger="file_analyzer.ai"):
+            analyzer.analyze(raw_text)
+
+        records = [r for r in caplog.records if r.name == "file_analyzer.ai"]
+        assert [r.ai_outcome for r in records] == ["transient_error", "success"]
+        assert [r.ai_attempt for r in records] == [1, 2]
+
+    def test_logs_validation_error_without_retrying(self, caplog):
+        client = make_client(response_content="not json at all")
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
+        raw_text = RawText(content="text", source_filename="doc.txt")
+
+        with caplog.at_level(logging.INFO, logger="file_analyzer.ai"):
+            with pytest.raises(AnalysisError):
+                analyzer.analyze(raw_text)
+
+        records = [r for r in caplog.records if r.name == "file_analyzer.ai"]
+        assert len(records) == 1
+        assert records[0].ai_outcome == "validation_error"

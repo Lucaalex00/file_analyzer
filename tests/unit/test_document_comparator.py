@@ -1,4 +1,5 @@
 import json
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -72,3 +73,16 @@ def test_raises_comparison_error_after_retries_exhausted():
         comparator.compare("A", "B")
 
     assert client.chat.completions.create.call_count == 2
+
+
+def test_logs_a_success_record_with_the_comparator_component_name(caplog):
+    client = make_client(response_content=VALID_RESPONSE_JSON)
+    comparator = DocumentComparator(client=client, deployment="gpt-4o-mini")
+
+    with caplog.at_level(logging.INFO, logger="file_analyzer.ai"):
+        comparator.compare("Version A text", "Version B text")
+
+    records = [r for r in caplog.records if r.name == "file_analyzer.ai"]
+    assert len(records) == 1
+    assert records[0].ai_component == "document_comparator"
+    assert records[0].ai_outcome == "success"
