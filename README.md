@@ -7,42 +7,38 @@ stored: the file exists only for the duration of the request.
 
 ![Uploading a lease, reviewing the extracted text, and getting a plain-language analysis with red flags](docs/screenshots/demo.gif)
 
-## Quick start — one command, no setup
-
-```bash
-docker run -d --name file-analyzer -p 8000:8000 ghcr.io/lucaalex00/file_analyzer:latest
-```
-
-Open http://localhost:8000. No credentials, no `.env`, no clone needed.
-If port 8000 is already taken on your machine, change the first `8000`
-only (e.g. `-p 3000:8000`, then open `localhost:3000` instead) — the
-second `8000` is the container's own port and must stay as-is.
-
-Run this exact command, not Docker Desktop's "Run" button on the image —
-the GUI defaults to an auto-generated container name and a random host
-port instead of the ones above, which just adds confusion.
-
-To stop it later: `docker stop file-analyzer && docker rm file-analyzer`.
-
-This one container **is the whole app** — extract, analyze, compare,
-batch, PDF/Markdown export, the web UI, all of it. There's no separate
-image or service per feature to combine: every endpoint in the
-[API table below](#api) is just a different route on this same running
-container.
-
-With no Azure OpenAI key configured, the app runs in **demo mode**: every
-part of the pipeline (extraction, PDF/OCR handling, rule-based red flags,
-PDF report generation) is real, only the AI-written explanation/comparison
-is simulated and clearly labeled as such, both in the response and in a
-banner in the UI. Try it with a file from [`examples/`](examples/), or any
-`.pdf`/`.txt`/`.docx`/`.eml`/image of your own.
-
-To run it with a real Azure OpenAI model instead of demo mode:
+## Quick start
 
 ```bash
 git clone https://github.com/Lucaalex00/file_analyzer.git && cd file_analyzer
+docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
+docker compose port api 8000
+```
+
+Open the address the last command prints (e.g. `0.0.0.0:8000`) in a
+browser. No credentials and no `.env` needed to try it — with no Azure
+OpenAI key configured the app runs in **demo mode**: every part of the
+pipeline (extraction, PDF/OCR handling, rule-based red flags, PDF report
+generation) is real, only the AI-written explanation/comparison is
+simulated and clearly labeled as such, both in the response and in a
+banner in the UI. Try it with a file from [`examples/`](examples/), or
+any `.pdf`/`.txt`/`.docx`/`.eml`/image of your own.
+
+This one service **is the whole app** — extract, analyze, compare, batch,
+PDF/Markdown export, the web UI, all of it. There's no separate
+image or service per feature to combine: every endpoint in the
+[API table below](#api) is just a different route on this same running
+container. `docker-compose.prebuilt.yml` swaps in the already-published
+image so this needs no local build; it's the same Compose project as
+local development below, so switching between them later never leaves a
+second, duplicate container behind — Compose just recreates the one `api`
+service either way.
+
+To develop against it with a real Azure OpenAI model instead of demo mode:
+
+```bash
 make env    # creates .env — fill in your Azure OpenAI credentials
-make up     # builds and starts the API at http://localhost:8000
+make up     # builds locally and starts the API at http://localhost:8000
 ```
 
 Or try it from the command line:
