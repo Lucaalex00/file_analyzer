@@ -7,6 +7,14 @@ stored: the file exists only for the duration of the request.
 
 ![Uploading a lease, reviewing the extracted text, and getting a plain-language analysis with red flags](docs/screenshots/demo.gif)
 
+## Live demo
+
+**[filean-app.kindground-bef02a33.swedencentral.azurecontainerapps.io](https://filean-app.kindground-bef02a33.swedencentral.azurecontainerapps.io)**
+— deployed on Azure Container Apps (see [`infra/`](infra/)), running in demo
+mode (no Azure OpenAI credentials attached). No install, nothing to run —
+just open it and try a file. Scales to zero when idle, so the first
+request after a while can take a few seconds to wake up.
+
 ## Quick start
 
 ```bash
@@ -153,6 +161,8 @@ make test-frontend-unit  # Node's built-in test runner, no running stack needed
 ## Roadmap
 
 Not yet built: `.msg` (Outlook binary format) email support — `.eml` is
-covered — custom PDF branding/themes, and a real Azure Functions deploy
-(Bicep already in `infra/`, gated behind a manual, explicitly-approved
-step).
+covered — and custom PDF branding/themes. The real Azure deploy (see
+[Live demo](#live-demo) above) is done — Azure Container Apps, not the
+Azure Functions originally planned here, since a Consumption-plan Function
+had no way to install the system libraries WeasyPrint needs (see
+[`infra/README.md`](infra/README.md)).

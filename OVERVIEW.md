@@ -107,6 +107,13 @@ switching between them never leaves a duplicate container behind). No
 `.env` is required to start: with no Azure OpenAI credentials the app runs
 in demo mode (see above) instead of failing to start.
 
-Azure: Consumption-plan Azure Function fronting the same FastAPI app (ASGI),
-deployed via Bicep for demo purposes and torn down afterward — see the Fase 2
-infra work tracked separately from this MVP.
+Azure: **Azure Container Apps**, deployed via Bicep (`infra/main.bicep`) —
+live at the URL in the README's "Live demo" section. The original plan
+targeted a Consumption-plan Azure Function, which never actually worked:
+that plan gives no way to install the system libraries (Pango, Cairo,
+GDK-Pixbuf) WeasyPrint needs, so `/health` would come up while `/analyze`
+failed at import or render time. Container Apps runs the project's own
+`Dockerfile` unmodified instead. Log Analytics + a Container Apps managed
+environment capture container logs; the app scales to zero when idle, so
+cost stays near zero on the always-free monthly grant. No Azure OpenAI
+credentials are attached to the live deploy — it runs in demo mode.

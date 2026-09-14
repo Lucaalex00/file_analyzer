@@ -4,12 +4,15 @@ param namePrefix string = 'filean'
 @description('Azure region')
 param location string = resourceGroup().location
 
-@secure()
-@description('Azure OpenAI API key, injected as an app setting')
-param azureOpenAiApiKey string
+@description('Public image to deploy (already published by CI, no registry credentials needed)')
+param containerImage string = 'ghcr.io/lucaalex00/file_analyzer:latest'
 
-@description('Azure OpenAI endpoint URL')
-param azureOpenAiEndpoint string
+@description('Azure OpenAI endpoint URL. Leave empty to run in demo mode (simulated AI explanations, everything else real) -- see src/api/config.py.')
+param azureOpenAiEndpoint string = ''
+
+@secure()
+@description('Azure OpenAI API key. Leave empty to run in demo mode.')
+param azureOpenAiApiKey string = ''
 
 @description('Azure OpenAI deployment name')
 param azureOpenAiDeployment string = 'gpt-4o-mini'
@@ -17,56 +20,73 @@ param azureOpenAiDeployment string = 'gpt-4o-mini'
 @description('Azure OpenAI API version')
 param azureOpenAiApiVersion string = '2024-08-01-preview'
 
-var storageAccountName = '${namePrefix}st${uniqueString(resourceGroup().id)}'
-var functionAppName = '${namePrefix}-func-${uniqueString(resourceGroup().id)}'
-var appServicePlanName = '${namePrefix}-plan'
+var logAnalyticsName = '${namePrefix}-logs'
+var containerAppEnvName = '${namePrefix}-env'
+var containerAppName = '${namePrefix}-app'
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-  name: storageAccountName
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: logAnalyticsName
   location: location
-  sku: {
-    name: 'Standard_LRS'
-  }
-  kind: 'StorageV2'
-}
-
-var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value}'
-
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
-  name: appServicePlanName
-  location: location
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-  }
   properties: {
-    // required for a Linux plan; without it Azure provisions a Windows plan
-    reserved: true
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
   }
 }
 
-resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
-  name: functionAppName
+resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: containerAppEnvName
   location: location
-  kind: 'functionapp,linux'
   properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    siteConfig: {
-      linuxFxVersion: 'PYTHON|3.12'
-      appSettings: [
-        { name: 'AzureWebJobsStorage', value: storageConnectionString }
-        { name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', value: storageConnectionString }
-        { name: 'WEBSITE_CONTENTSHARE', value: '${functionAppName}-content' }
-        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
-        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'python' }
-        { name: 'AZURE_OPENAI_API_KEY', value: azureOpenAiApiKey }
-        { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
-        { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
-        { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenAiApiVersion }
-      ]
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
     }
   }
 }
 
-output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
+resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: containerAppName
+  location: location
+  properties: {
+    managedEnvironmentId: containerAppEnv.id
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: 8000
+        allowInsecure: false
+      }
+    }
+    template: {
+      containers: [
+        {
+          name: 'api'
+          image: containerImage
+          resources: {
+            cpu: json('0.5')
+            memory: '1Gi'
+          }
+          env: [
+            { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
+            { name: 'AZURE_OPENAI_API_KEY', value: azureOpenAiApiKey }
+            { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
+            { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenAiApiVersion }
+          ]
+        }
+      ]
+      // Scales to zero when idle -- no traffic, no cost. The first request
+      // after a scale-to-zero period pays a cold-start latency hit; fine for
+      // a demo, not something you'd accept for a real production SLA.
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+output containerAppUrl string = 'https://${containerApp.properties.configuration.ingress.fqdn}'

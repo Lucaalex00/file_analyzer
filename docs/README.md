@@ -46,9 +46,10 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-08 — AI call tracing](2026-09-08-ai-call-tracing.md)
 - [2026-09-08 — Demo mode, one-command startup](2026-09-08-demo-mode-one-command.md)
 
-## Repo health
+## Repo health & deploy
 
 - [2026-09-14 — Weak-point analysis, recruiter simplification](2026-09-14-analisi-punti-deboli.md)
+- [2026-09-14 — Real deploy on Azure Container Apps](2026-09-14-deploy-azure-container-apps.md)
 
 ## Other
 
