@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -41,6 +41,33 @@ app.mount("/static", StaticFiles(directory=_FRONTEND_DIR), name="static")
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Every domain error maps to the same HTTP status code everywhere it can be
+# raised, so endpoints just raise it and let one handler do the mapping
+# instead of repeating the same try/except in every route.
+_ERROR_STATUS_CODES: list[tuple[type[Exception], int]] = [
+    (UnsupportedFileTypeError, 415),
+    (ExtractionError, 422),
+    (AnalysisError, 502),
+    (ComparisonError, 502),
+]
+
+
+def _status_code_for(exc: Exception) -> int | None:
+    for exc_type, status_code in _ERROR_STATUS_CODES:
+        if isinstance(exc, exc_type):
+            return status_code
+    return None
+
+
+def _register_error_handler(exc_type: type[Exception]) -> None:
+    @app.exception_handler(exc_type)
+    async def _handler(request: Request, exc: Exception) -> JSONResponse:  # noqa: ARG001
+        return JSONResponse(status_code=_status_code_for(exc), content={"detail": str(exc)})
+
+
+for _exc_type, _ in _ERROR_STATUS_CODES:
+    _register_error_handler(_exc_type)
 
 
 def _rate_limit() -> str:
@@ -89,13 +116,8 @@ async def extract(
     settings = get_settings()
     file_bytes = await _read_within_size_limit(file, settings)
 
-    try:
-        extractor = factory.get_extractor(file.filename or "upload", file.content_type)
-        raw_text = extractor.extract(file_bytes, file.filename or "upload")
-    except UnsupportedFileTypeError as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-    except ExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    extractor = factory.get_extractor(file.filename or "upload", file.content_type)
+    raw_text = extractor.extract(file_bytes, file.filename or "upload")
 
     return {"text": raw_text.content}
 
@@ -111,19 +133,12 @@ async def analyze(
     settings = get_settings()
     file_bytes = await _read_within_size_limit(file, settings)
 
-    try:
-        pdf_bytes = pipeline.run(
-            file_bytes=file_bytes,
-            filename=file.filename or "upload",
-            content_type=file.content_type,
-            language=language,
-        )
-    except UnsupportedFileTypeError as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-    except ExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except AnalysisError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    pdf_bytes = pipeline.run(
+        file_bytes=file_bytes,
+        filename=file.filename or "upload",
+        content_type=file.content_type,
+        language=language,
+    )
 
     report_filename = _report_filename(file.filename or "upload")
     return Response(
@@ -144,19 +159,12 @@ async def analyze_review(
     settings = get_settings()
     file_bytes = await _read_within_size_limit(file, settings)
 
-    try:
-        analysis, pdf_bytes = pipeline.run_with_analysis(
-            file_bytes=file_bytes,
-            filename=file.filename or "upload",
-            content_type=file.content_type,
-            language=language,
-        )
-    except UnsupportedFileTypeError as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-    except ExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except AnalysisError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    analysis, pdf_bytes = pipeline.run_with_analysis(
+        file_bytes=file_bytes,
+        filename=file.filename or "upload",
+        content_type=file.content_type,
+        language=language,
+    )
 
     return {
         "analysis": analysis.model_dump(),
@@ -176,19 +184,12 @@ async def analyze_markdown(
     file_bytes = await _read_within_size_limit(file, settings)
     filename = file.filename or "upload"
 
-    try:
-        analysis, _ = pipeline.run_with_analysis(
-            file_bytes=file_bytes,
-            filename=filename,
-            content_type=file.content_type,
-            language=language,
-        )
-    except UnsupportedFileTypeError as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-    except ExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except AnalysisError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    analysis, _ = pipeline.run_with_analysis(
+        file_bytes=file_bytes,
+        filename=filename,
+        content_type=file.content_type,
+        language=language,
+    )
 
     markdown = pipeline.render_markdown(analysis, filename)
     report_filename = _report_filename(filename, extension="md")
@@ -236,12 +237,10 @@ async def analyze_batch(
             )
         except HTTPException as exc:
             results.append({"filename": filename, "status": "error", "status_code": exc.status_code, "detail": exc.detail})
-        except UnsupportedFileTypeError as exc:
-            results.append({"filename": filename, "status": "error", "status_code": 415, "detail": str(exc)})
-        except ExtractionError as exc:
-            results.append({"filename": filename, "status": "error", "status_code": 422, "detail": str(exc)})
-        except AnalysisError as exc:
-            results.append({"filename": filename, "status": "error", "status_code": 502, "detail": str(exc)})
+        except (UnsupportedFileTypeError, ExtractionError, AnalysisError) as exc:
+            results.append(
+                {"filename": filename, "status": "error", "status_code": _status_code_for(exc), "detail": str(exc)}
+            )
 
     return {"results": results}
 
@@ -262,17 +261,10 @@ async def compare(
     name_a = file_a.filename or "version_a"
     name_b = file_b.filename or "version_b"
 
-    try:
-        extractor_a = factory.get_extractor(name_a, file_a.content_type)
-        text_a = extractor_a.extract(bytes_a, name_a).content
-        extractor_b = factory.get_extractor(name_b, file_b.content_type)
-        text_b = extractor_b.extract(bytes_b, name_b).content
-        comparison = comparator.compare(text_a, text_b, language=language)
-    except UnsupportedFileTypeError as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-    except ExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except ComparisonError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    extractor_a = factory.get_extractor(name_a, file_a.content_type)
+    text_a = extractor_a.extract(bytes_a, name_a).content
+    extractor_b = factory.get_extractor(name_b, file_b.content_type)
+    text_b = extractor_b.extract(bytes_b, name_b).content
+    comparison = comparator.compare(text_a, text_b, language=language)
 
     return {"comparison": comparison.model_dump()}

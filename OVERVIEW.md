@@ -40,15 +40,73 @@ automatically when the request completes. `POST /analyze` rejects oversized
 uploads from `Content-Length` before reading the body where the client provides
 it, with a post-read size check as a fallback.
 
+## Demo mode
+
+`Settings.is_demo_mode` is `True` whenever `AZURE_OPENAI_ENDPOINT`/
+`AZURE_OPENAI_API_KEY` aren't set. In that case `src/api/dependencies.py`
+wires in `DemoAIClient` (`src/analyzer/demo_client.py`) instead of a real
+`AzureOpenAI` client — it duck-types the same `client.chat.completions.create(...)`
+surface, so `DocumentAnalyzer`/`DocumentComparator` need no changes at all to
+support it. Red flags stay real: `DemoAIClient` runs the same
+`detect_rule_based_flags()` against the actual extracted text; only the
+narrative explanation/comparison is templated, and it always says so
+explicitly — in the API response, a startup log warning, `/health`'s
+`demo_mode` field, and a banner in the UI. This is what makes
+`docker run ghcr.io/.../file_analyzer:latest` usable with zero setup: the
+whole pipeline runs for real except the AI-written prose.
+
+## PDF table reconstruction
+
+When `PdfExtractor`'s primary text layer looks corrupted (`_looks_corrupted()`
+in `src/extractors/pdf_extractor.py` — density of spaces, or a density of
+lowercase-to-uppercase letter transitions with no space between them, both
+signals of a broken embedded font encoding), it falls back to OCR. If
+`pdfplumber` detects real vector-drawn table lines on the page, each table is
+reconstructed cell-by-cell (`_reconstruct_table_as_grid`) — every cell OCR'd
+individually rather than the whole page as one blob, which is both far more
+accurate and immune to the broken text encoding (OCR reads pixels, not the
+PDF's internal character mapping). Content above the topmost table (header)
+is OCR'd as one block; content below the lowest table is never discarded —
+financial/legal documents can't risk losing something that might matter — it's
+kept in its own clearly labelled section instead.
+
+## AI reliability
+
+Three defenses, none of which need a live LLM call to build or verify
+(fake/mocked clients throughout, see `tests/eval/`):
+
+- **Prompt injection defenses**: `SYSTEM_PROMPT`/`COMPARISON_SYSTEM_PROMPT`
+  wrap document content in `<document>`/`<version_a>`/`<version_b>` tags and
+  instruct the model to treat it as untrusted data, never as instructions. A
+  rule-based detector (same mechanism as the other red-flag rules) also
+  flags injection-style phrases ("ignore previous instructions") as a
+  visible red flag — defense in depth, not a silent block.
+- **Call tracing**: `src/observability/ai_tracing.py` logs every LLM call
+  attempt (component, attempt number, outcome, duration) — never the
+  document content or the raw exception message, only the exception's class
+  name, consistent with the app's "nothing is stored" premise.
+- **Eval/regression suite** (`tests/eval/test_analysis_regression.py`): a
+  small set of representative documents run through the whole pipeline with
+  a fixed fake LLM response, asserting the rule-based layer catches red
+  flags the model misses — guards against a future change silently
+  weakening the merge logic or the injection defense.
+
 ## Testing
 
 Every component is unit-tested in isolation; `DocumentAnalyzer` tests mock the
 Azure OpenAI client entirely, so the suite never makes a real network call.
-`tests/integration/` covers the full pipeline and the HTTP layer.
+`tests/integration/` covers the full pipeline and the HTTP layer;
+`tests/eval/` covers pipeline-wide behavior against fixed fake responses.
 
 ## Deployment
 
-Local: Docker Compose (`make up`) or against a CI-published image (`make demo`).
+Local: Docker Compose (`make up` for local dev, `make demo` or
+`docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d`
+against the CI-published image — same Compose project either way, so
+switching between them never leaves a duplicate container behind). No
+`.env` is required to start: with no Azure OpenAI credentials the app runs
+in demo mode (see above) instead of failing to start.
+
 Azure: Consumption-plan Azure Function fronting the same FastAPI app (ASGI),
 deployed via Bicep for demo purposes and torn down afterward — see the Fase 2
 infra work tracked separately from this MVP.
