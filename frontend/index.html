@@ -38,8 +38,13 @@
     </form>
 
     <div id="status" role="status" hidden>
-      <span id="status-spinner" class="status-spinner"></span>
-      <span id="status-text"></span>
+      <div class="status-row">
+        <span id="status-spinner" class="status-spinner"></span>
+        <span id="status-text"></span>
+      </div>
+      <div class="status-progress-track">
+        <div id="status-progress-fill" class="status-progress-fill"></div>
+      </div>
     </div>
     <div id="error-message" data-role="error-message" hidden></div>
 

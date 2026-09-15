@@ -56,6 +56,7 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-15 — Fix: script di generazione esempi mai eseguibile](2026-09-15-fix-script-esempi.md)
 - [2026-09-15 — Fix: latenza analisi oltre 30s (reasoning_effort low)](2026-09-15-fix-latenza-analisi.md)
 - [2026-09-15 — Fix: doppia estrazione del documento durante l'analisi](2026-09-15-fix-doppia-estrazione.md)
+- [2026-09-15 — UX: barra di progresso stimata durante l'attesa](2026-09-15-barra-progresso-attesa.md)
 
 ## Other
 

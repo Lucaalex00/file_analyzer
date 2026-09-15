@@ -4,6 +4,7 @@ const dropzone = document.getElementById("dropzone");
 const statusEl = document.getElementById("status");
 const statusSpinnerEl = document.getElementById("status-spinner");
 const statusTextEl = document.getElementById("status-text");
+const statusProgressFillEl = document.getElementById("status-progress-fill");
 const errorEl = document.getElementById("error-message");
 const resultEl = document.getElementById("result");
 const previewEl = document.getElementById("report-preview");
@@ -330,6 +331,17 @@ const ANALYZING_STEP_KEYS = ["statusStep1", "statusStep2", "statusStep3"];
 const ANALYZING_STEP_INTERVAL_MS = 2200;
 let analyzingStepTimer = null;
 
+// Estimated total time for a single analysis (extraction + AI call), based
+// on real measurements against Azure OpenAI gpt-5-mini -- see
+// docs/2026-09-15-fix-latenza-analisi.md and
+// docs/2026-09-15-fix-doppia-estrazione.md. The bar eases toward a cap
+// below 100% instead of the real estimate, so a slower-than-usual request
+// never leaves it looking stuck at "100% but not actually done".
+const PROGRESS_ESTIMATE_MS = 30000;
+const PROGRESS_CAP_PERCENT = 92;
+const PROGRESS_TICK_MS = 200;
+let progressTimer = null;
+
 function startAnalyzingStatus() {
   statusEl.hidden = false;
   let stepIndex = 0;
@@ -339,6 +351,14 @@ function startAnalyzingStatus() {
   };
   showStep();
   analyzingStepTimer = setInterval(showStep, ANALYZING_STEP_INTERVAL_MS);
+
+  statusProgressFillEl.style.width = "0%";
+  const startedAt = Date.now();
+  progressTimer = setInterval(() => {
+    const elapsed = Date.now() - startedAt;
+    const percent = Math.min(PROGRESS_CAP_PERCENT, (elapsed / PROGRESS_ESTIMATE_MS) * PROGRESS_CAP_PERCENT);
+    statusProgressFillEl.style.width = `${percent}%`;
+  }, PROGRESS_TICK_MS);
 }
 
 function stopAnalyzingStatus() {
@@ -346,8 +366,13 @@ function stopAnalyzingStatus() {
     clearInterval(analyzingStepTimer);
     analyzingStepTimer = null;
   }
+  if (progressTimer) {
+    clearInterval(progressTimer);
+    progressTimer = null;
+  }
   statusEl.hidden = true;
   statusTextEl.textContent = "";
+  statusProgressFillEl.style.width = "0%";
 }
 
 form.addEventListener("submit", async (event) => {

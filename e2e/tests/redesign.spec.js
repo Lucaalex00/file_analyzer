@@ -130,6 +130,45 @@ test("shows a spinner and rotating status messages while analysis is in progress
   await expect(page.locator("#status")).toBeHidden();
 });
 
+test("shows a progress bar that fills up while analysis is in progress", async ({ page }) => {
+  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
+  await page.route("**/analyze/review", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2600));
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        analysis: {
+          detected_context: "work",
+          plain_explanation: "A short memo about a deadline.",
+          summary: "A memo reminding the team of a Friday deadline.",
+          red_flags: [],
+        },
+        pdf_base64: fakePdfBase64,
+      }),
+    });
+  });
+  await page.goto("/");
+
+  await page.setInputFiles("input[type=file]", {
+    name: "memo.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Team, please submit your reports by Friday."),
+  });
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
+
+  const progressFill = page.locator("#status-progress-fill");
+  await expect(progressFill).toBeVisible();
+
+  const widthAt = async () => parseFloat((await progressFill.evaluate((el) => el.style.width)) || "0");
+  const firstWidth = await widthAt();
+
+  await expect.poll(widthAt, { timeout: 5000 }).toBeGreaterThan(firstWidth);
+
+  await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("#status")).toBeHidden();
+});
+
 test("shows a demo mode banner when the backend reports demo_mode", async ({ page }) => {
   await page.route("**/health", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "ok", demo_mode: true }) });
