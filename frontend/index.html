@@ -37,7 +37,10 @@
       <button type="submit" data-i18n="analyzeButton">Analizza</button>
     </form>
 
-    <div id="status" role="status"></div>
+    <div id="status" role="status" hidden>
+      <span id="status-spinner" class="status-spinner"></span>
+      <span id="status-text"></span>
+    </div>
     <div id="error-message" data-role="error-message" hidden></div>
 
     <div class="sections">

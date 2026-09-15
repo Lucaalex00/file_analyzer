@@ -2,6 +2,8 @@ const form = document.getElementById("analyze-form");
 const fileInput = document.getElementById("file-input");
 const dropzone = document.getElementById("dropzone");
 const statusEl = document.getElementById("status");
+const statusSpinnerEl = document.getElementById("status-spinner");
+const statusTextEl = document.getElementById("status-text");
 const errorEl = document.getElementById("error-message");
 const resultEl = document.getElementById("result");
 const previewEl = document.getElementById("report-preview");
@@ -320,6 +322,34 @@ dropzone.addEventListener("drop", (event) => {
 
 fileInput.addEventListener("change", handleFileSelected);
 
+// Real analysis takes a few seconds end to end (extraction + LLM call);
+// these step messages are illustrative reassurance, not literal
+// real-time progress -- the backend is a single request/response, it has
+// no way to report intermediate stages back to the browser.
+const ANALYZING_STEP_KEYS = ["statusStep1", "statusStep2", "statusStep3"];
+const ANALYZING_STEP_INTERVAL_MS = 2200;
+let analyzingStepTimer = null;
+
+function startAnalyzingStatus() {
+  statusEl.hidden = false;
+  let stepIndex = 0;
+  const showStep = () => {
+    statusTextEl.textContent = FileAnalyzerI18n.translate(languageSelect.value, ANALYZING_STEP_KEYS[stepIndex]);
+    stepIndex = (stepIndex + 1) % ANALYZING_STEP_KEYS.length;
+  };
+  showStep();
+  analyzingStepTimer = setInterval(showStep, ANALYZING_STEP_INTERVAL_MS);
+}
+
+function stopAnalyzingStatus() {
+  if (analyzingStepTimer) {
+    clearInterval(analyzingStepTimer);
+    analyzingStepTimer = null;
+  }
+  statusEl.hidden = true;
+  statusTextEl.textContent = "";
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   resetOutcome();
@@ -329,7 +359,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  statusEl.textContent = FileAnalyzerI18n.translate(languageSelect.value, "statusAnalyzing");
+  startAnalyzingStatus();
 
   const formData = new FormData();
   formData.append("file", file);
@@ -359,7 +389,7 @@ form.addEventListener("submit", async (event) => {
   } catch (networkError) {
     showError(FileAnalyzerI18n.translate(languageSelect.value, "errNetwork"));
   } finally {
-    statusEl.textContent = "";
+    stopAnalyzingStatus();
   }
 });
 

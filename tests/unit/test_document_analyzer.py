@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.analyzer.document_analyzer import AnalysisError, DocumentAnalyzer
-from src.analyzer.prompts import MAX_DOCUMENT_CHARS, build_user_prompt
+from src.analyzer.prompts import MAX_DOCUMENT_CHARS, SYSTEM_PROMPT, build_user_prompt
 from src.extractors.base import RawText
 
 VALID_RESPONSE_JSON = json.dumps(
@@ -37,6 +37,22 @@ def make_client(response_content: str | None = None, raise_exc: Exception | None
         completion.choices = [choice]
         client.chat.completions.create.return_value = completion
     return client
+
+
+class TestSystemPromptGuardrails:
+    def test_instructs_the_model_to_avoid_generic_filler(self):
+        # Real testing against a live model surfaced explanations that were
+        # accurate but generic ("this document outlines the terms") instead
+        # of grounded in the document's own specifics. Regression guard so
+        # this instruction can't be silently dropped from the prompt.
+        lowered = SYSTEM_PROMPT.lower()
+        assert "generic" in lowered
+        assert "specific" in lowered
+
+    def test_instructs_the_model_to_cite_concrete_details(self):
+        lowered = SYSTEM_PROMPT.lower()
+        assert "dates" in lowered
+        assert "amounts" in lowered
 
 
 class TestBuildUserPrompt:
