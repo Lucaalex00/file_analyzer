@@ -69,7 +69,18 @@
 
       <details class="section" id="result" hidden open>
         <summary data-i18n="reportHeading">Report</summary>
-        <embed id="report-preview" data-role="report-preview" type="application/pdf" />
+        <div class="comparison-grid">
+          <div class="comparison-pane">
+            <h3 data-i18n="originalDocumentHeading">Documento originale</h3>
+            <embed id="original-preview" data-role="original-preview" hidden />
+            <img id="original-preview-image" data-role="original-preview-image" alt="" hidden />
+            <pre id="original-preview-text" data-role="original-preview-text" hidden></pre>
+          </div>
+          <div class="comparison-pane">
+            <h3 data-i18n="generatedReportHeading">Report generato</h3>
+            <embed id="report-preview" data-role="report-preview" type="application/pdf" />
+          </div>
+        </div>
         <a id="download-link" data-role="download-link" data-i18n="downloadPdf">Scarica PDF</a>
         <button type="button" id="download-markdown-button" data-role="download-markdown-button" data-i18n="downloadMarkdown" hidden>
           Scarica anche in Markdown

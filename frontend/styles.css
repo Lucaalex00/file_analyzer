@@ -383,12 +383,47 @@ button[type="submit"]:active {
   border-color: var(--muted);
 }
 
-#report-preview {
+.comparison-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.comparison-pane {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+.comparison-pane h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+#report-preview,
+#original-preview,
+#original-preview-image {
   width: 100%;
   height: 65vh;
   border: 1px solid var(--border);
   border-radius: 6px;
-  margin-bottom: 0.75rem;
+  object-fit: contain;
+  background: var(--surface);
+}
+
+#original-preview-text {
+  width: 100%;
+  height: 65vh;
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-sizing: border-box;
 }
 
 #download-link {

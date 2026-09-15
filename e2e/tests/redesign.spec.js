@@ -42,6 +42,22 @@ test("a successful analysis renders the readable analysis panel", async ({ page 
   await expect(page.locator("[data-role=analysis-red-flags] li")).toContainText("Tight deadline");
 });
 
+test("shows the original document side by side with the generated report", async ({ page }) => {
+  await mockAnalyzeReview(page);
+  await page.goto("/");
+  await analyzeAFile(page);
+
+  const originalPane = page.locator("[data-role=original-preview-text]");
+  const reportPane = page.locator("#report-preview");
+  await expect(originalPane).toBeVisible();
+  await expect(originalPane).toContainText("Team, please submit your reports by Friday.");
+  await expect(reportPane).toBeVisible();
+
+  const originalBox = await originalPane.boundingBox();
+  const reportBox = await reportPane.boundingBox();
+  expect(originalBox.x).toBeLessThan(reportBox.x);
+});
+
 test("copy buttons copy the extracted text and the analysis to the clipboard", async ({ page, context, browserName }) => {
   test.skip(browserName !== "chromium", "Clipboard permissions API is Chromium-only in Playwright");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);

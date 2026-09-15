@@ -8,6 +8,9 @@ const statusProgressFillEl = document.getElementById("status-progress-fill");
 const errorEl = document.getElementById("error-message");
 const resultEl = document.getElementById("result");
 const previewEl = document.getElementById("report-preview");
+const originalPreviewEl = document.getElementById("original-preview");
+const originalPreviewImageEl = document.getElementById("original-preview-image");
+const originalPreviewTextEl = document.getElementById("original-preview-text");
 const downloadEl = document.getElementById("download-link");
 const extractedTextPanel = document.getElementById("extracted-text-panel");
 const extractedTextEl = document.getElementById("extracted-text");
@@ -130,6 +133,41 @@ function resetOutcome() {
     URL.revokeObjectURL(previewEl.src);
     previewEl.src = "";
   }
+  resetOriginalPreview();
+}
+
+function resetOriginalPreview() {
+  originalPreviewEl.hidden = true;
+  originalPreviewImageEl.hidden = true;
+  originalPreviewTextEl.hidden = true;
+  if (originalPreviewEl.src) {
+    URL.revokeObjectURL(originalPreviewEl.src);
+    originalPreviewEl.src = "";
+  }
+  if (originalPreviewImageEl.src) {
+    URL.revokeObjectURL(originalPreviewImageEl.src);
+    originalPreviewImageEl.src = "";
+  }
+  originalPreviewTextEl.textContent = "";
+}
+
+function showOriginalPreview(file) {
+  resetOriginalPreview();
+
+  const type = file.type || "";
+  if (type === "application/pdf") {
+    originalPreviewEl.src = URL.createObjectURL(file);
+    originalPreviewEl.type = "application/pdf";
+    originalPreviewEl.hidden = false;
+  } else if (type.startsWith("image/")) {
+    originalPreviewImageEl.src = URL.createObjectURL(file);
+    originalPreviewImageEl.hidden = false;
+  } else {
+    // No sensible direct rendering for .txt/.docx/.eml -- reuse the text
+    // already extracted for the preview panel instead of re-reading the file.
+    originalPreviewTextEl.textContent = lastExtractedText;
+    originalPreviewTextEl.hidden = false;
+  }
 }
 
 function renderAnalysis(analysis) {
@@ -219,11 +257,18 @@ function showError(message) {
   errorEl.textContent = message;
 }
 
-function showResult(blob, filename) {
+function showResult(blob, filename, originalFile) {
   const objectUrl = URL.createObjectURL(blob);
   previewEl.src = objectUrl;
   downloadEl.href = objectUrl;
   downloadEl.setAttribute("download", filename);
+  // History entries don't store the original File object, so reopening one
+  // has no left-hand preview to show -- reset instead of crashing on it.
+  if (originalFile) {
+    showOriginalPreview(originalFile);
+  } else {
+    resetOriginalPreview();
+  }
   resultEl.hidden = false;
 }
 
@@ -408,7 +453,7 @@ form.addEventListener("submit", async (event) => {
     const { analysis, pdf_base64: pdfBase64 } = await response.json();
     const blob = base64ToBlob(pdfBase64, "application/pdf");
     const filename = FileAnalyzerFilename.reportFilenameFor(file.name);
-    showResult(blob, filename);
+    showResult(blob, filename, file);
     renderAnalysis(analysis);
     await addToHistory(file, blob, filename);
     lastAnalyzedFile = file;
