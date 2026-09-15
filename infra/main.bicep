@@ -31,6 +31,15 @@ var logAnalyticsName = '${namePrefix}-logs'
 var containerAppEnvName = '${namePrefix}-env'
 var containerAppName = '${namePrefix}-app'
 
+// Container Apps rejects a secret with an empty value outright, so only
+// declare (and reference) the ones that actually have one -- leaving both
+// empty means no secrets and no AI-key env vars at all, same as demo mode
+// locally.
+var azureSecret = empty(azureOpenAiApiKey) ? [] : [{ name: 'azure-openai-api-key', value: azureOpenAiApiKey }]
+var groqSecret = empty(groqApiKey) ? [] : [{ name: 'groq-api-key', value: groqApiKey }]
+var azureEnv = empty(azureOpenAiApiKey) ? [] : [{ name: 'AZURE_OPENAI_API_KEY', secretRef: 'azure-openai-api-key' }]
+var groqEnv = empty(groqApiKey) ? [] : [{ name: 'GROQ_API_KEY', secretRef: 'groq-api-key' }]
+
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsName
   location: location
@@ -67,6 +76,12 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8000
         allowInsecure: false
       }
+      // API keys go through Container Apps' own secret store, referenced
+      // by name (secretRef) in the container env below -- never inlined as
+      // a plain env var value, so they don't show up in `az containerapp
+      // show`/the portal's "Environment variables" view, only in "Secrets"
+      // (access-controlled separately).
+      secrets: concat(azureSecret, groqSecret)
     }
     template: {
       containers: [
@@ -77,14 +92,12 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json('0.5')
             memory: '1Gi'
           }
-          env: [
+          env: concat([
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
-            { name: 'AZURE_OPENAI_API_KEY', value: azureOpenAiApiKey }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
             { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenAiApiVersion }
-            { name: 'GROQ_API_KEY', value: groqApiKey }
             { name: 'GROQ_MODEL', value: groqModel }
-          ]
+          ], azureEnv, groqEnv)
         }
       ]
       // Scales to zero when idle -- no traffic, no cost. The first request

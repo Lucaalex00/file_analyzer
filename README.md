@@ -10,10 +10,12 @@ stored: the file exists only for the duration of the request.
 ## Live demo
 
 **[filean-app.kindground-bef02a33.swedencentral.azurecontainerapps.io](https://filean-app.kindground-bef02a33.swedencentral.azurecontainerapps.io)**
-— deployed on Azure Container Apps (see [`infra/`](infra/)), running in demo
-mode (no Azure OpenAI credentials attached). No install, nothing to run —
-just open it and try a file. Scales to zero when idle, so the first
-request after a while can take a few seconds to wake up.
+— deployed on Azure Container Apps (see [`infra/`](infra/)), running with
+a real Azure OpenAI model attached. No install, nothing to run — just
+open it and try a file. Scales to zero when idle, so the first request
+after a while can take a few seconds to wake up. Rate-limited per IP
+(20 requests/minute) — if that's ever exhausted or the deploy is put back
+into demo mode, explanations still work, just simulated.
 
 ## Quick start
 
