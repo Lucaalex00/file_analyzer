@@ -38,6 +38,18 @@ app = FastAPI(title="File Analyzer", lifespan=lifespan)
 _FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 app.mount("/static", StaticFiles(directory=_FRONTEND_DIR), name="static")
 
+
+@app.middleware("http")
+async def no_cache_static_assets(request: Request, call_next):
+    # Static assets have no versioned filenames, so without an explicit
+    # header browsers apply heuristic caching (based on Last-Modified) and
+    # can silently keep serving a pre-deploy JS/CSS bundle. no-cache forces
+    # revalidation (a cheap 304 via ETag) on every load instead.
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
