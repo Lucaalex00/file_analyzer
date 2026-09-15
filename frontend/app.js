@@ -361,9 +361,16 @@ form.addEventListener("submit", async (event) => {
 
   startAnalyzingStatus();
 
+  // Wait for the preview's /extract call so its result can be reused below --
+  // avoids re-extracting (and, for scanned files, re-OCRing) the same file twice.
+  await extractionPromise;
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("language", languageSelect.value);
+  if (lastExtractedText) {
+    formData.append("extracted_text", lastExtractedText);
+  }
 
   try {
     const response = await fetch("/analyze/review", { method: "POST", body: formData });
@@ -382,7 +389,6 @@ form.addEventListener("submit", async (event) => {
     lastAnalyzedFile = file;
     downloadMarkdownButton.hidden = false;
 
-    await extractionPromise; // ensure /extract has resolved before using its result
     if (lastExtractedText) {
       extractedTextEl.innerHTML = highlightRedFlags(lastExtractedText, analysis.red_flags);
     }

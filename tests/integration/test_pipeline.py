@@ -99,6 +99,40 @@ def test_run_with_analysis_passes_the_requested_language_to_the_analyzer():
     assert "French" in user_message["content"]
 
 
+def test_run_with_analysis_from_text_skips_extraction_entirely():
+    factory = MagicMock()
+    pipeline = DocumentAnalysisPipeline(
+        factory=factory,
+        analyzer=DocumentAnalyzer(client=make_fake_openai_client(), deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, pdf_bytes = pipeline.run_with_analysis_from_text(
+        text="Team, please submit your reports by Friday.",
+        filename="memo.txt",
+    )
+
+    factory.get_extractor.assert_not_called()
+    assert analysis.detected_context == "work"
+    assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_run_with_analysis_from_text_merges_rule_based_flags():
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=make_fake_openai_client(), deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, _ = pipeline.run_with_analysis_from_text(
+        text="This lease renews automatically unless cancelled by either party.",
+        filename="lease.txt",
+    )
+
+    titles = [flag.title for flag in analysis.red_flags]
+    assert "Rinnovo automatico" in titles
+
+
 def test_render_markdown_reuses_the_pipelines_report_generator():
     pipeline = DocumentAnalysisPipeline(
         factory=ExtractorFactory(),

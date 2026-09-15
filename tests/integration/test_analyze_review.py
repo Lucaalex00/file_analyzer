@@ -51,6 +51,32 @@ def test_analyze_review_returns_analysis_and_base64_pdf():
     assert base64.b64decode(body["pdf_base64"]) == b"%PDF-1.4 fake pdf content"
 
 
+def test_analyze_review_uses_pre_extracted_text_when_provided_skipping_re_extraction():
+    fake_analysis = AnalysisResult(
+        detected_context="legal",
+        plain_explanation="This is a rental agreement.",
+        summary="A one-year lease.",
+        red_flags=[],
+    )
+    fake_pipeline = MagicMock()
+    fake_pipeline.run_with_analysis_from_text.return_value = (fake_analysis, b"%PDF-1.4 fake pdf content")
+    override_pipeline(fake_pipeline)
+
+    response = client.post(
+        "/analyze/review",
+        files={"file": ("lease.txt", b"Some lease text", "text/plain")},
+        data={"extracted_text": "Some lease text already extracted client-side"},
+    )
+
+    assert response.status_code == 200
+    fake_pipeline.run_with_analysis_from_text.assert_called_once_with(
+        text="Some lease text already extracted client-side",
+        filename="lease.txt",
+        language="it",
+    )
+    fake_pipeline.run_with_analysis.assert_not_called()
+
+
 def test_analyze_review_passes_through_the_requested_language():
     fake_analysis = AnalysisResult(
         detected_context="legal",

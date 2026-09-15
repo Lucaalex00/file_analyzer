@@ -155,17 +155,26 @@ async def analyze_review(
     request: Request,
     file: UploadFile,
     language: str = Form("it"),
+    extracted_text: str | None = Form(None),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
 ) -> dict:
-    settings = get_settings()
-    file_bytes = await _read_within_size_limit(file, settings)
-
-    analysis, pdf_bytes = pipeline.run_with_analysis(
-        file_bytes=file_bytes,
-        filename=file.filename or "upload",
-        content_type=file.content_type,
-        language=language,
-    )
+    if extracted_text:
+        # The frontend already extracted this text for the preview panel --
+        # reuse it instead of re-running (potentially OCR-heavy) extraction.
+        analysis, pdf_bytes = pipeline.run_with_analysis_from_text(
+            text=extracted_text,
+            filename=file.filename or "upload",
+            language=language,
+        )
+    else:
+        settings = get_settings()
+        file_bytes = await _read_within_size_limit(file, settings)
+        analysis, pdf_bytes = pipeline.run_with_analysis(
+            file_bytes=file_bytes,
+            filename=file.filename or "upload",
+            content_type=file.content_type,
+            language=language,
+        )
 
     return {
         "analysis": analysis.model_dump(),
