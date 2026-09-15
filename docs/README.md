@@ -53,6 +53,7 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-15 — Azure OpenAI unblocked, httpx fix, Groq integration](2026-09-15-azure-openai-sbloccato.md)
 - [2026-09-15 — Live demo updated with real Azure OpenAI](2026-09-15-live-demo-ai-reale.md)
 - [2026-09-15 — Anti-genericness prompt guardrail, progress UX](2026-09-15-guardrail-prompt-e-progress-ux.md)
+- [2026-09-15 — Fix: script di generazione esempi mai eseguibile](2026-09-15-fix-script-esempi.md)
 
 ## Other
 

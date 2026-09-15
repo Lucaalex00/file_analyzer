@@ -20,4 +20,10 @@ services:
     volumes:
       - ./src:/app/src
       - ./frontend:/app/frontend
+      # Neither is baked into the image (see .dockerignore) -- mounted here
+      # only so `docker compose exec api python -m scripts.generate_examples`
+      # (documented in examples/README.md) actually has something to run
+      # and somewhere to write its output.
+      - ./scripts:/app/scripts
+      - ./examples:/app/examples
     command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
