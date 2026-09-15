@@ -6,19 +6,25 @@ const statusSpinnerEl = document.getElementById("status-spinner");
 const statusTextEl = document.getElementById("status-text");
 const statusProgressFillEl = document.getElementById("status-progress-fill");
 const errorEl = document.getElementById("error-message");
-const resultEl = document.getElementById("result");
+const workspaceEl = document.getElementById("workspace");
+const workspaceActionsEl = document.querySelector("[data-role=workspace-actions]");
 const previewEl = document.getElementById("report-preview");
 const originalPreviewEl = document.getElementById("original-preview");
 const originalPreviewImageEl = document.getElementById("original-preview-image");
 const originalPreviewTextEl = document.getElementById("original-preview-text");
+const documentZoneEl = document.querySelector("[data-role=document-zone]");
+const rawSkeletonEl = document.querySelector("[data-role=raw-skeleton]");
 const downloadEl = document.getElementById("download-link");
-const extractedTextPanel = document.getElementById("extracted-text-panel");
 const extractedTextEl = document.getElementById("extracted-text");
 const historyListEl = document.getElementById("history-list");
 const downloadMarkdownButton = document.getElementById("download-markdown-button");
 const languageSelect = document.getElementById("language-select");
 const themeToggleButton = document.getElementById("theme-toggle");
-const analysisPanel = document.getElementById("analysis-panel");
+const analysisTitleEl = document.querySelector("[data-role=analysis-title]");
+const analysisPlaceholderEl = document.querySelector("[data-role=analysis-placeholder]");
+const analysisSkeletonEl = document.querySelector("[data-role=analysis-skeleton]");
+const analysisContentEl = document.querySelector("[data-role=analysis-content]");
+const copyAnalysisButton = document.querySelector("[data-role=copy-analysis]");
 const analysisContextEl = document.querySelector("[data-role=analysis-context]");
 const analysisSummaryEl = document.querySelector("[data-role=analysis-summary]");
 const analysisExplanationEl = document.querySelector("[data-role=analysis-explanation]");
@@ -36,6 +42,7 @@ function friendlyErrorMessage(status) {
 let lastExtractedText = "";
 let lastAnalyzedFile = null;
 let extractionPromise = Promise.resolve();
+let reportObjectUrl = "";
 
 function escapeHtml(text) {
   return text
@@ -122,51 +129,71 @@ document.querySelector("[data-role=copy-analysis]").addEventListener("click", (e
   copyToClipboard(parts.filter(Boolean).join("\n\n"), event.currentTarget);
 });
 
+// The analysis zone shows exactly one of: a prompt to start, a loading
+// skeleton, the explanation, or -- for a reopened history entry -- the
+// stored PDF.
+function setAnalysisState(state) {
+  analysisPlaceholderEl.hidden = state !== "placeholder";
+  analysisSkeletonEl.hidden = state !== "loading";
+  analysisContentEl.hidden = state !== "ready";
+  previewEl.hidden = state !== "report";
+  copyAnalysisButton.hidden = state !== "ready";
+  // Swapping the key (not just the text) keeps the title correct when the
+  // user later changes language, since applyTranslations reads data-i18n.
+  analysisTitleEl.dataset.i18n = state === "report" ? "generatedReportHeading" : "analysisHeading";
+  analysisTitleEl.textContent = FileAnalyzerI18n.translate(languageSelect.value, analysisTitleEl.dataset.i18n);
+}
+
+function releaseReportUrl() {
+  if (reportObjectUrl) {
+    URL.revokeObjectURL(reportObjectUrl);
+    reportObjectUrl = "";
+  }
+  previewEl.removeAttribute("src");
+  downloadEl.removeAttribute("href");
+}
+
 function resetOutcome() {
   errorEl.hidden = true;
   errorEl.textContent = "";
-  resultEl.hidden = true;
-  analysisPanel.hidden = true;
+  workspaceEl.classList.remove("workspace--report-only");
+  workspaceActionsEl.hidden = true;
   downloadMarkdownButton.hidden = true;
   lastAnalyzedFile = null;
-  if (previewEl.src) {
-    URL.revokeObjectURL(previewEl.src);
-    previewEl.src = "";
-  }
-  resetOriginalPreview();
+  setAnalysisState("placeholder");
+  releaseReportUrl();
 }
 
 function resetOriginalPreview() {
+  documentZoneEl.hidden = true;
   originalPreviewEl.hidden = true;
   originalPreviewImageEl.hidden = true;
-  originalPreviewTextEl.hidden = true;
   if (originalPreviewEl.src) {
     URL.revokeObjectURL(originalPreviewEl.src);
-    originalPreviewEl.src = "";
+    originalPreviewEl.removeAttribute("src");
   }
   if (originalPreviewImageEl.src) {
     URL.revokeObjectURL(originalPreviewImageEl.src);
-    originalPreviewImageEl.src = "";
+    originalPreviewImageEl.removeAttribute("src");
   }
-  originalPreviewTextEl.textContent = "";
 }
 
 function showOriginalPreview(file) {
   resetOriginalPreview();
 
+  // Only files the browser can actually render get their own pane. For
+  // .txt/.docx/.eml the extracted text above already *is* the document, so a
+  // second pane would just repeat it -- the analysis takes that space instead.
   const type = file.type || "";
   if (type === "application/pdf") {
     originalPreviewEl.src = URL.createObjectURL(file);
     originalPreviewEl.type = "application/pdf";
     originalPreviewEl.hidden = false;
+    documentZoneEl.hidden = false;
   } else if (type.startsWith("image/")) {
     originalPreviewImageEl.src = URL.createObjectURL(file);
     originalPreviewImageEl.hidden = false;
-  } else {
-    // No sensible direct rendering for .txt/.docx/.eml -- reuse the text
-    // already extracted for the preview panel instead of re-reading the file.
-    originalPreviewTextEl.textContent = lastExtractedText;
-    originalPreviewTextEl.hidden = false;
+    documentZoneEl.hidden = false;
   }
 }
 
@@ -190,7 +217,7 @@ function renderAnalysis(analysis) {
     });
   }
 
-  analysisPanel.hidden = false;
+  setAnalysisState("ready");
 }
 
 async function downloadMarkdownReport(file) {
@@ -225,13 +252,15 @@ downloadMarkdownButton.addEventListener("click", () => {
 });
 
 function resetExtractedText() {
-  extractedTextPanel.hidden = true;
+  rawSkeletonEl.hidden = true;
+  extractedTextEl.hidden = true;
   extractedTextEl.textContent = "";
   lastExtractedText = "";
 }
 
 async function showExtractedTextPreview(file) {
   resetExtractedText();
+  rawSkeletonEl.hidden = false;
 
   const formData = new FormData();
   formData.append("file", file);
@@ -239,15 +268,18 @@ async function showExtractedTextPreview(file) {
   try {
     const response = await fetch("/extract", { method: "POST", body: formData });
     if (!response.ok) {
+      rawSkeletonEl.hidden = true;
       showError(friendlyErrorMessage(response.status));
       return;
     }
 
     const { text } = await response.json();
     lastExtractedText = text;
+    rawSkeletonEl.hidden = true;
     extractedTextEl.textContent = text;
-    extractedTextPanel.hidden = false;
+    extractedTextEl.hidden = false;
   } catch (networkError) {
+    rawSkeletonEl.hidden = true;
     showError(FileAnalyzerI18n.translate(languageSelect.value, "errNetwork"));
   }
 }
@@ -257,19 +289,22 @@ function showError(message) {
   errorEl.textContent = message;
 }
 
-function showResult(blob, filename, originalFile) {
-  const objectUrl = URL.createObjectURL(blob);
-  previewEl.src = objectUrl;
-  downloadEl.href = objectUrl;
+function setReportDownload(blob, filename) {
+  releaseReportUrl();
+  reportObjectUrl = URL.createObjectURL(blob);
+  downloadEl.href = reportObjectUrl;
   downloadEl.setAttribute("download", filename);
-  // History entries don't store the original File object, so reopening one
-  // has no left-hand preview to show -- reset instead of crashing on it.
-  if (originalFile) {
-    showOriginalPreview(originalFile);
-  } else {
-    resetOriginalPreview();
-  }
-  resultEl.hidden = false;
+  workspaceActionsEl.hidden = false;
+}
+
+// A history entry stores only the generated PDF -- no original file, no
+// analysis -- so the workspace shows that report on its own.
+function showStoredReport(blob, filename) {
+  workspaceEl.hidden = false;
+  workspaceEl.classList.add("workspace--report-only");
+  setReportDownload(blob, filename);
+  previewEl.src = reportObjectUrl;
+  setAnalysisState("report");
 }
 
 function blobToBase64(blob) {
@@ -308,7 +343,9 @@ function renderHistory() {
     reopenButton.dataset.role = "history-reopen";
     reopenButton.addEventListener("click", () => {
       const blob = base64ToBlob(entry.pdfBase64, "application/pdf");
-      showResult(blob, entry.reportFilename);
+      resetExtractedText();
+      resetOriginalPreview();
+      showStoredReport(blob, entry.reportFilename);
       // The original File object isn't stored in history, so the Markdown
       // re-export (which needs to re-run the pipeline) isn't available here.
       lastAnalyzedFile = null;
@@ -338,11 +375,19 @@ async function addToHistory(file, blob, reportFilename) {
 function handleFileSelected() {
   const file = fileInput.files[0];
   resetOutcome();
-  if (file) {
-    extractionPromise = showExtractedTextPreview(file);
-  } else {
+  if (!file) {
     resetExtractedText();
+    resetOriginalPreview();
+    workspaceEl.hidden = true;
+    return;
   }
+
+  // The workspace opens as soon as a file is chosen and fills in stage by
+  // stage: the document pane first (straight from the file), then the raw
+  // text once /extract returns, then the analysis once the AI answers.
+  workspaceEl.hidden = false;
+  showOriginalPreview(file);
+  extractionPromise = showExtractedTextPreview(file);
 }
 
 ["dragover", "dragleave", "drop"].forEach((eventName) => {
@@ -430,6 +475,8 @@ form.addEventListener("submit", async (event) => {
   }
 
   startAnalyzingStatus();
+  workspaceEl.hidden = false;
+  setAnalysisState("loading");
 
   // Wait for the preview's /extract call so its result can be reused below --
   // avoids re-extracting (and, for scanned files, re-OCRing) the same file twice.
@@ -446,6 +493,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch("/analyze/review", { method: "POST", body: formData });
 
     if (!response.ok) {
+      setAnalysisState("placeholder");
       showError(friendlyErrorMessage(response.status));
       return;
     }
@@ -453,7 +501,7 @@ form.addEventListener("submit", async (event) => {
     const { analysis, pdf_base64: pdfBase64 } = await response.json();
     const blob = base64ToBlob(pdfBase64, "application/pdf");
     const filename = FileAnalyzerFilename.reportFilenameFor(file.name);
-    showResult(blob, filename, file);
+    setReportDownload(blob, filename);
     renderAnalysis(analysis);
     await addToHistory(file, blob, filename);
     lastAnalyzedFile = file;
@@ -463,6 +511,7 @@ form.addEventListener("submit", async (event) => {
       extractedTextEl.innerHTML = highlightRedFlags(lastExtractedText, analysis.red_flags);
     }
   } catch (networkError) {
+    setAnalysisState("placeholder");
     showError(FileAnalyzerI18n.translate(languageSelect.value, "errNetwork"));
   } finally {
     stopAnalyzingStatus();

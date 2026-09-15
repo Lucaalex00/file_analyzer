@@ -59,6 +59,7 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-15 — UX: barra di progresso stimata durante l'attesa](2026-09-15-barra-progresso-attesa.md)
 - [2026-09-15 — Fix: asset statici senza header di cache](2026-09-15-fix-cache-asset-statici.md)
 - [2026-09-15 — UX: documento originale e report affiancati](2026-09-15-confronto-documento-report.md)
+- [2026-09-15 — Redesign: il workspace "libro" che si popola a tappe](2026-09-15-workspace-immersivo.md)
 
 ## Other
 

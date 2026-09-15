@@ -1,32 +1,44 @@
 const { test, expect } = require("@playwright/test");
 
-async function mockAnalyzeReview(page, redFlags = []) {
-  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
+const FAKE_PDF_BASE64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
+
+function analysisBody(redFlags = []) {
+  return JSON.stringify({
+    analysis: {
+      detected_context: "work",
+      plain_explanation: "A short memo about a deadline.",
+      summary: "A memo reminding the team of a Friday deadline.",
+      red_flags: redFlags,
+    },
+    pdf_base64: FAKE_PDF_BASE64,
+  });
+}
+
+async function mockAnalyzeReview(page, redFlags = [], delayMs = 0) {
   await page.route("**/analyze/review", async (route) => {
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        analysis: {
-          detected_context: "work",
-          plain_explanation: "A short memo about a deadline.",
-          summary: "A memo reminding the team of a Friday deadline.",
-          red_flags: redFlags,
-        },
-        pdf_base64: fakePdfBase64,
-      }),
+      body: analysisBody(redFlags),
     });
   });
 }
 
-async function analyzeAFile(page) {
+async function selectAFile(page) {
   await page.setInputFiles("input[type=file]", {
     name: "memo.txt",
     mimeType: "text/plain",
     buffer: Buffer.from("Team, please submit your reports by Friday."),
   });
+}
+
+async function analyzeAFile(page) {
+  await selectAFile(page);
   await page.getByRole("button", { name: /analizza|analyze/i }).click();
-  await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
 }
 
 test("a successful analysis renders the readable analysis panel", async ({ page }) => {
@@ -42,20 +54,77 @@ test("a successful analysis renders the readable analysis panel", async ({ page 
   await expect(page.locator("[data-role=analysis-red-flags] li")).toContainText("Tight deadline");
 });
 
-test("shows the original document side by side with the generated report", async ({ page }) => {
+test("lays out raw text above the document and the analysis side by side", async ({ page }) => {
+  await mockAnalyzeReview(page);
+  // The real backend can't parse this stub PDF, so the extraction the layout
+  // depends on is mocked -- the layout, not the parsing, is what's under test.
+  await page.route("**/extract", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ text: "Team, please submit your reports by Friday." }),
+    });
+  });
+  await page.goto("/");
+
+  await page.setInputFiles("input[type=file]", {
+    name: "memo.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4 stub document"),
+  });
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
+
+  const rawText = page.locator("[data-role=extracted-text]");
+  const documentPane = page.locator("[data-role=original-preview]");
+  const analysisPane = page.locator("[data-role=analysis-content]");
+
+  await expect(rawText).toContainText("Team, please submit your reports by Friday.");
+  await expect(documentPane).toBeVisible();
+
+  const rawBox = await rawText.boundingBox();
+  const documentBox = await documentPane.boundingBox();
+  const analysisBox = await analysisPane.boundingBox();
+
+  expect(documentBox.x).toBeLessThan(analysisBox.x);
+  expect(rawBox.y + rawBox.height).toBeLessThanOrEqual(documentBox.y);
+});
+
+test("skips the document pane for files the raw text already shows in full", async ({ page }) => {
   await mockAnalyzeReview(page);
   await page.goto("/");
   await analyzeAFile(page);
 
-  const originalPane = page.locator("[data-role=original-preview-text]");
-  const reportPane = page.locator("#report-preview");
-  await expect(originalPane).toBeVisible();
-  await expect(originalPane).toContainText("Team, please submit your reports by Friday.");
-  await expect(reportPane).toBeVisible();
+  // A .txt file renders to exactly the extracted text shown above, so a
+  // second pane repeating it would be noise.
+  await expect(page.locator("[data-role=document-zone]")).toBeHidden();
+  await expect(page.locator("[data-role=extracted-text]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
+});
 
-  const originalBox = await originalPane.boundingBox();
-  const reportBox = await reportPane.boundingBox();
-  expect(originalBox.x).toBeLessThan(reportBox.x);
+test("the workspace fills in progressively as each stage completes", async ({ page }) => {
+  await mockAnalyzeReview(page, [], 2000);
+  await page.goto("/");
+
+  await expect(page.locator("[data-role=workspace]")).toBeHidden();
+
+  await selectAFile(page);
+
+  // Extraction stage: raw text and the document pane are already populated,
+  // the analysis pane is still waiting for the user to start the analysis.
+  await expect(page.locator("[data-role=workspace]")).toBeVisible();
+  await expect(page.locator("[data-role=extracted-text]")).toHaveText("Team, please submit your reports by Friday.");
+  await expect(page.locator("[data-role=analysis-placeholder]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeHidden();
+
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
+
+  // Analysis stage: the pane shows a loading skeleton until the AI responds.
+  await expect(page.locator("[data-role=analysis-skeleton]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-placeholder]")).toBeHidden();
+
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-skeleton]")).toBeHidden();
 });
 
 test("copy buttons copy the extracted text and the analysis to the clipboard", async ({ page, context, browserName }) => {
@@ -64,11 +133,7 @@ test("copy buttons copy the extracted text and the analysis to the clipboard", a
   await mockAnalyzeReview(page);
   await page.goto("/");
 
-  await page.setInputFiles("input[type=file]", {
-    name: "memo.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("Team, please submit your reports by Friday."),
-  });
+  await selectAFile(page);
   await expect(page.locator("[data-role=extracted-text]")).toHaveText("Team, please submit your reports by Friday.");
 
   await page.locator("[data-role=copy-extracted-text]").click();
@@ -76,7 +141,7 @@ test("copy buttons copy the extracted text and the analysis to the clipboard", a
   expect(copiedExtracted).toBe("Team, please submit your reports by Friday.");
 
   await page.getByRole("button", { name: /analizza|analyze/i }).click();
-  await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
 
   await page.locator("[data-role=copy-analysis]").click();
   const copiedAnalysis = await page.evaluate(() => navigator.clipboard.readText());
@@ -107,32 +172,12 @@ test("switching the language translates the static UI labels", async ({ page }) 
 });
 
 test("shows a spinner and rotating status messages while analysis is in progress", async ({ page }) => {
-  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
-  await page.route("**/analyze/review", async (route) => {
-    // Slow enough to observe the status rotate through at least two steps
-    // (interval is 2200ms) before the request resolves.
-    await new Promise((resolve) => setTimeout(resolve, 2600));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        analysis: {
-          detected_context: "work",
-          plain_explanation: "A short memo about a deadline.",
-          summary: "A memo reminding the team of a Friday deadline.",
-          red_flags: [],
-        },
-        pdf_base64: fakePdfBase64,
-      }),
-    });
-  });
+  // Slow enough to observe the status rotate through at least two steps
+  // (interval is 2200ms) before the request resolves.
+  await mockAnalyzeReview(page, [], 2600);
   await page.goto("/");
 
-  await page.setInputFiles("input[type=file]", {
-    name: "memo.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("Team, please submit your reports by Friday."),
-  });
+  await selectAFile(page);
   await page.getByRole("button", { name: /analizza|analyze/i }).click();
 
   const statusText = page.locator("#status-text");
@@ -142,35 +187,15 @@ test("shows a spinner and rotating status messages while analysis is in progress
 
   await expect.poll(async () => statusText.textContent(), { timeout: 5000 }).not.toBe(firstStep);
 
-  await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
   await expect(page.locator("#status")).toBeHidden();
 });
 
 test("shows a progress bar that fills up while analysis is in progress", async ({ page }) => {
-  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
-  await page.route("**/analyze/review", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 2600));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        analysis: {
-          detected_context: "work",
-          plain_explanation: "A short memo about a deadline.",
-          summary: "A memo reminding the team of a Friday deadline.",
-          red_flags: [],
-        },
-        pdf_base64: fakePdfBase64,
-      }),
-    });
-  });
+  await mockAnalyzeReview(page, [], 2600);
   await page.goto("/");
 
-  await page.setInputFiles("input[type=file]", {
-    name: "memo.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("Team, please submit your reports by Friday."),
-  });
+  await selectAFile(page);
   await page.getByRole("button", { name: /analizza|analyze/i }).click();
 
   const progressFill = page.locator("#status-progress-fill");
@@ -181,7 +206,7 @@ test("shows a progress bar that fills up while analysis is in progress", async (
 
   await expect.poll(widthAt, { timeout: 5000 }).toBeGreaterThan(firstWidth);
 
-  await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
   await expect(page.locator("#status")).toBeHidden();
 });
 
@@ -216,14 +241,12 @@ test("dragging a file over the dropzone shows an active visual state", async ({ 
   await expect(dropzone).not.toHaveClass(/dropzone--active/);
 });
 
-test("sections are collapsible accordions", async ({ page }) => {
-  await mockAnalyzeReview(page);
+test("the history panel is a collapsible accordion", async ({ page }) => {
   await page.goto("/");
-  await analyzeAFile(page);
 
-  const resultSection = page.locator("#result");
-  await expect(resultSection).toHaveJSProperty("open", true);
+  const historyPanel = page.locator("#history-panel");
+  await expect(historyPanel).toHaveJSProperty("open", true);
 
-  await resultSection.locator("summary").click();
-  await expect(resultSection).toHaveJSProperty("open", false);
+  await historyPanel.locator("summary").click();
+  await expect(historyPanel).toHaveJSProperty("open", false);
 });

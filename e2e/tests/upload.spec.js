@@ -58,7 +58,7 @@ test("a failed extraction preview shows an error immediately, not silently nothi
   await expect(page.locator("[data-role=extracted-text]")).toBeHidden();
 });
 
-test("successful analysis embeds the returned PDF and offers a download link", async ({ page }) => {
+test("successful analysis shows the explanation and offers a download link", async ({ page }) => {
   const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
 
   await page.route("**/analyze/review", async (route) => {
@@ -86,7 +86,7 @@ test("successful analysis embeds the returned PDF and offers a download link", a
   });
   await page.getByRole("button", { name: /analizza/i }).click();
 
-  await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-summary]")).toContainText("deadline");
 
   const downloadLink = page.locator("a[data-role=download-link]");
   await expect(downloadLink).toBeVisible();

@@ -49,43 +49,74 @@
     <div id="error-message" data-role="error-message" hidden></div>
 
     <div class="sections">
-      <details class="section" id="extracted-text-panel" hidden open>
-        <summary data-i18n="extractedTextHeading">Testo estratto</summary>
-        <button type="button" class="copy-button" data-role="copy-extracted-text" data-i18n="copyButton">Copia</button>
-        <pre id="extracted-text" data-role="extracted-text"></pre>
-      </details>
-
-      <details class="section" id="analysis-panel" hidden open>
-        <summary data-i18n="analysisHeading">Analisi</summary>
-        <button type="button" class="copy-button" data-role="copy-analysis" data-i18n="copyButton">Copia</button>
-        <p><strong data-i18n="contextLabel">Contesto rilevato</strong>: <span data-role="analysis-context"></span></p>
-        <p><strong data-i18n="summaryLabel">Riassunto</strong></p>
-        <p data-role="analysis-summary"></p>
-        <p><strong data-i18n="explanationLabel">Spiegazione</strong></p>
-        <p data-role="analysis-explanation"></p>
-        <p><strong data-i18n="redFlagsHeading">Punti di attenzione</strong></p>
-        <ul data-role="analysis-red-flags"></ul>
-      </details>
-
-      <details class="section" id="result" hidden open>
-        <summary data-i18n="reportHeading">Report</summary>
-        <div class="comparison-grid">
-          <div class="comparison-pane">
-            <h3 data-i18n="originalDocumentHeading">Documento originale</h3>
-            <embed id="original-preview" data-role="original-preview" hidden />
-            <img id="original-preview-image" data-role="original-preview-image" alt="" hidden />
-            <pre id="original-preview-text" data-role="original-preview-text" hidden></pre>
+      <section id="workspace" class="workspace" data-role="workspace" hidden>
+        <article class="zone zone--raw" id="raw-zone" data-role="raw-zone">
+          <header class="zone__header">
+            <h2 class="zone__title" data-i18n="extractedTextHeading">Testo estratto</h2>
+            <button type="button" class="copy-button" data-role="copy-extracted-text" data-i18n="copyButton">Copia</button>
+          </header>
+          <div class="zone__body zone__body--raw">
+            <div class="skeleton" data-role="raw-skeleton" aria-hidden="true" hidden>
+              <span class="skeleton__line"></span>
+              <span class="skeleton__line"></span>
+              <span class="skeleton__line skeleton__line--short"></span>
+            </div>
+            <pre id="extracted-text" data-role="extracted-text" hidden></pre>
           </div>
-          <div class="comparison-pane">
-            <h3 data-i18n="generatedReportHeading">Report generato</h3>
-            <embed id="report-preview" data-role="report-preview" type="application/pdf" />
-          </div>
+        </article>
+
+        <div class="workspace__panes">
+          <article class="zone zone--document" data-role="document-zone" hidden>
+            <header class="zone__header">
+              <h2 class="zone__title" data-i18n="originalDocumentHeading">Documento originale</h2>
+            </header>
+            <div class="zone__body zone__body--document">
+              <embed id="original-preview" data-role="original-preview" hidden />
+              <img id="original-preview-image" data-role="original-preview-image" alt="" hidden />
+            </div>
+          </article>
+
+          <article class="zone zone--analysis" data-role="analysis-zone">
+            <header class="zone__header">
+              <h2 class="zone__title" data-role="analysis-title" data-i18n="analysisHeading">Analisi</h2>
+              <button type="button" class="copy-button" data-role="copy-analysis" data-i18n="copyButton" hidden>Copia</button>
+            </header>
+            <div class="zone__body">
+              <p class="zone__placeholder" data-role="analysis-placeholder" data-i18n="analysisPlaceholder">
+                Premi «Analizza» per generare la spiegazione dell'IA.
+              </p>
+
+              <div class="skeleton skeleton--fill" data-role="analysis-skeleton" aria-hidden="true" hidden>
+                <span class="skeleton__line skeleton__line--short"></span>
+                <span class="skeleton__line"></span>
+                <span class="skeleton__line"></span>
+                <span class="skeleton__line skeleton__line--short"></span>
+                <span class="skeleton__line"></span>
+              </div>
+
+              <div class="analysis" data-role="analysis-content" hidden>
+                <p class="analysis__label" data-i18n="contextLabel">Contesto rilevato</p>
+                <p class="analysis__context" data-role="analysis-context"></p>
+                <p class="analysis__label" data-i18n="summaryLabel">Riassunto</p>
+                <p data-role="analysis-summary"></p>
+                <p class="analysis__label" data-i18n="explanationLabel">Spiegazione</p>
+                <p data-role="analysis-explanation"></p>
+                <p class="analysis__label" data-i18n="redFlagsHeading">Punti di attenzione</p>
+                <ul data-role="analysis-red-flags"></ul>
+              </div>
+
+              <embed id="report-preview" data-role="report-preview" type="application/pdf" hidden />
+            </div>
+          </article>
         </div>
-        <a id="download-link" data-role="download-link" data-i18n="downloadPdf">Scarica PDF</a>
-        <button type="button" id="download-markdown-button" data-role="download-markdown-button" data-i18n="downloadMarkdown" hidden>
-          Scarica anche in Markdown
-        </button>
-      </details>
+
+        <div class="workspace__actions" data-role="workspace-actions" hidden>
+          <a id="download-link" data-role="download-link" data-i18n="downloadPdf">Scarica PDF</a>
+          <button type="button" id="download-markdown-button" data-role="download-markdown-button" data-i18n="downloadMarkdown" hidden>
+            Scarica anche in Markdown
+          </button>
+        </div>
+      </section>
 
       <details class="section" id="history-panel" open>
         <summary data-i18n="historyHeading">Cronologia (solo su questo browser)</summary>

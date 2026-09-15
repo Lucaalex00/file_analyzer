@@ -265,6 +265,161 @@ button[type="submit"]:active {
   gap: 1rem;
 }
 
+/* ---- Workspace: the "book" that fills in as each stage completes ---- */
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: zone-in 0.4s ease both;
+}
+
+.workspace[hidden] {
+  display: none;
+}
+
+.workspace__panes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.workspace__panes > .zone {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* A reopened history entry only has the stored PDF -- no original file and
+   no analysis -- so those two zones stand down and the report takes over. */
+.workspace--report-only .zone--raw,
+.workspace--report-only .zone--document {
+  display: none;
+}
+
+.zone {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem 1.1rem;
+  box-shadow: var(--shadow);
+  animation: zone-in 0.45s ease both;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+.zone:hover {
+  border-color: color-mix(in srgb, var(--border) 45%, var(--accent) 55%);
+  box-shadow: 0 6px 18px rgba(74, 55, 40, 0.13);
+  transform: translateY(-2px);
+}
+
+:root[data-theme="dark"] .zone:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.zone__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.zone__title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* flex: 0 0 auto, not flex: 1 -- inside a column flex container a grow
+   factor resolves the height from the content and silently overrides the
+   fixed heights below, which is what keeps these panes scrollable. */
+.zone__body {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.zone__placeholder {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.zone--raw .zone__body {
+  height: min(13rem, 28vh);
+}
+
+.workspace__panes .zone__body {
+  height: min(30rem, 62vh);
+}
+
+/* ---- Skeleton placeholders while a stage is still loading ---- */
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+}
+
+.skeleton[hidden] {
+  display: none;
+}
+
+.skeleton__line {
+  height: 0.7rem;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--border) 25%,
+    color-mix(in srgb, var(--border) 55%, var(--surface) 45%) 50%,
+    var(--border) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton__line--short {
+  width: 62%;
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes zone-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -315,17 +470,27 @@ button[type="submit"]:active {
 }
 
 #extracted-text {
+  height: 100%;
+  margin: 0;
+  overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 60vh;
-  overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.75rem;
   font-family: "Cascadia Code", "Consolas", monospace;
   font-size: 0.85rem;
+  line-height: 1.55;
   background: var(--bg);
-  margin: 0;
+  animation: content-in 0.35s ease both;
+}
+
+#extracted-text[hidden] {
+  display: none;
+}
+
+.zone[hidden] {
+  display: none;
 }
 
 #extracted-text mark {
@@ -346,15 +511,42 @@ button[type="submit"]:active {
   background: var(--mark-low);
 }
 
-#analysis-panel p {
-  line-height: 1.5;
+.analysis {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  animation: content-in 0.4s ease both;
 }
 
-#analysis-panel strong {
+.analysis[hidden] {
+  display: none;
+}
+
+.analysis p {
+  line-height: 1.6;
+  margin: 0 0 0.9rem;
+}
+
+.analysis__label {
   color: var(--accent);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.08em;
+  margin: 1.1rem 0 0.3rem;
+}
+
+.analysis__label:first-child {
+  margin-top: 0;
+}
+
+.analysis__context {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.85rem;
 }
 
 [data-role="analysis-red-flags"] {
@@ -369,6 +561,13 @@ button[type="submit"]:active {
   border-left: 4px solid var(--muted);
   border-radius: 0 6px 6px 0;
   background: var(--bg);
+  line-height: 1.5;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+[data-role="analysis-red-flags"] li:hover {
+  transform: translateX(3px);
+  box-shadow: var(--shadow);
 }
 
 [data-role="analysis-red-flags"] li.severity-high {
@@ -383,59 +582,51 @@ button[type="submit"]:active {
   border-color: var(--muted);
 }
 
-.comparison-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.comparison-pane {
-  flex: 1 1 300px;
-  min-width: 0;
-}
-
-.comparison-pane h3 {
-  margin: 0 0 0.4rem;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
 #report-preview,
 #original-preview,
 #original-preview-image {
   width: 100%;
-  height: 65vh;
+  height: 100%;
   border: 1px solid var(--border);
   border-radius: 6px;
   object-fit: contain;
-  background: var(--surface);
+  background: var(--bg);
+  animation: content-in 0.35s ease both;
 }
 
-#original-preview-text {
-  width: 100%;
-  height: 65vh;
-  margin: 0;
-  padding: 0.75rem;
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  white-space: pre-wrap;
-  word-break: break-word;
-  box-sizing: border-box;
+#report-preview[hidden],
+#original-preview[hidden],
+#original-preview-image[hidden] {
+  display: none;
+}
+
+.workspace__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  animation: content-in 0.35s ease both;
+}
+
+.workspace__actions[hidden] {
+  display: none;
 }
 
 #download-link {
   display: inline-block;
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 8px;
+  padding: 0.55rem 1.2rem;
   text-decoration: none;
   font-weight: 600;
-  margin-right: 1rem;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 #download-link:hover {
-  text-decoration: underline;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 #download-markdown-button {
@@ -464,9 +655,15 @@ button[type="submit"]:active {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 0.6rem 0;
+  padding: 0.6rem 0.5rem;
   border-bottom: 1px solid var(--border);
+  border-radius: 6px;
   font-size: 0.9rem;
+  transition: background-color 0.15s ease;
+}
+
+#history-list li:hover {
+  background: var(--bg);
 }
 
 #history-list li:last-child {
@@ -490,5 +687,29 @@ button[type="submit"]:active {
 @media (max-width: 700px) {
   .page-header {
     padding-top: 1rem;
+  }
+
+  .workspace__panes .zone__body {
+    height: 20rem;
+  }
+
+  .zone--raw .zone__body {
+    height: 10rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .zone:hover,
+  [data-role="analysis-red-flags"] li:hover,
+  #download-link:hover {
+    transform: none;
   }
 }

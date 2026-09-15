@@ -27,7 +27,7 @@ async function analyzeAFile(page) {
     buffer: Buffer.from("Team, please submit your reports by Friday."),
   });
   await page.getByRole("button", { name: /analizza/i }).click();
-  await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
 }
 
 test("a successful analysis is added to the local history", async ({ page }) => {
@@ -51,7 +51,7 @@ test("history persists across a page reload", async ({ page }) => {
   await expect(page.locator("[data-role=history-item]")).toHaveCount(1);
 });
 
-test("reopening a history entry shows the report preview again", async ({ page }) => {
+test("reopening a history entry shows the stored report on its own", async ({ page }) => {
   await mockAnalyze(page);
   await page.goto("/");
   await analyzeAFile(page);
@@ -59,5 +59,9 @@ test("reopening a history entry shows the report preview again", async ({ page }
 
   await page.locator("[data-role=history-reopen]").click();
 
+  // A history entry only stores the generated PDF -- not the original file or
+  // the analysis -- so the workspace shows the report alone.
   await expect(page.locator("embed[data-role=report-preview]")).toBeVisible();
+  await expect(page.locator("[data-role=extracted-text]")).toBeHidden();
+  await expect(page.locator("a[data-role=download-link]")).toBeVisible();
 });
