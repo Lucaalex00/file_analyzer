@@ -25,6 +25,7 @@ class DocumentComparator:
                 completion = self._client.chat.completions.create(
                     model=self._deployment,
                     response_format={"type": "json_object"},
+                    extra_body={"reasoning_effort": "low"},
                     messages=[
                         {"role": "system", "content": COMPARISON_SYSTEM_PROMPT},
                         {

@@ -99,7 +99,7 @@ class _FakeCompletion:
 
 
 class _FakeCompletions:
-    def create(self, model, response_format, messages):  # noqa: ARG002 - matches the real client's signature
+    def create(self, model, response_format, messages, extra_body=None):  # noqa: ARG002 - matches the real client's signature
         system_content = next(m["content"] for m in messages if m["role"] == "system")
         user_content = next(m["content"] for m in messages if m["role"] == "user")
 

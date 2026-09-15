@@ -57,6 +57,16 @@ def test_calls_client_with_both_versions_in_the_user_prompt():
     assert "Beta content" in user_message["content"]
 
 
+def test_calls_client_with_low_reasoning_effort_for_latency():
+    client = make_client(response_content=VALID_RESPONSE_JSON)
+    comparator = DocumentComparator(client=client, deployment="gpt-4o-mini")
+
+    comparator.compare("Alpha content", "Beta content")
+
+    _, kwargs = client.chat.completions.create.call_args
+    assert kwargs["extra_body"] == {"reasoning_effort": "low"}
+
+
 def test_raises_comparison_error_on_invalid_json():
     client = make_client(response_content="not json")
     comparator = DocumentComparator(client=client, deployment="gpt-4o-mini", max_retries=0)

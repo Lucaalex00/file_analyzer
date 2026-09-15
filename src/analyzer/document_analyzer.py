@@ -26,6 +26,7 @@ class DocumentAnalyzer:
                 completion = self._client.chat.completions.create(
                     model=self._deployment,
                     response_format={"type": "json_object"},
+                    extra_body={"reasoning_effort": "low"},
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": build_user_prompt(raw_text.content, language=language)},

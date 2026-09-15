@@ -115,6 +115,16 @@ class TestAnalyze:
         _, kwargs = client.chat.completions.create.call_args
         assert kwargs["model"] == "gpt-4o-mini"
 
+    def test_calls_client_with_low_reasoning_effort_for_latency(self):
+        client = make_client(response_content=VALID_RESPONSE_JSON)
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini")
+        raw_text = RawText(content="Some text", source_filename="doc.txt")
+
+        analyzer.analyze(raw_text)
+
+        _, kwargs = client.chat.completions.create.call_args
+        assert kwargs["extra_body"] == {"reasoning_effort": "low"}
+
     def test_passes_the_requested_language_into_the_user_prompt(self):
         client = make_client(response_content=VALID_RESPONSE_JSON)
         analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini")
