@@ -89,7 +89,8 @@ def _report_filename(original_filename: str, extension: str = "pdf") -> str:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "demo_mode": get_settings().is_demo_mode}
+    settings = get_settings()
+    return {"status": "ok", "demo_mode": settings.is_demo_mode, "ai_provider": settings.ai_provider}
 
 
 async def _read_within_size_limit(file: UploadFile, settings: Settings) -> bytes:

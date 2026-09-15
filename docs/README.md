@@ -50,6 +50,7 @@ happened — not a polished changelog, the real working history. Start with
 
 - [2026-09-14 — Weak-point analysis, recruiter simplification](2026-09-14-analisi-punti-deboli.md)
 - [2026-09-14 — Real deploy on Azure Container Apps](2026-09-14-deploy-azure-container-apps.md)
+- [2026-09-15 — Azure OpenAI unblocked, httpx fix, Groq integration](2026-09-15-azure-openai-sbloccato.md)
 
 ## Other
 

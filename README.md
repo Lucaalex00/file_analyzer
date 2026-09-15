@@ -42,10 +42,12 @@ local development below, so switching between them later never leaves a
 second, duplicate container behind — Compose just recreates the one `api`
 service either way.
 
-To develop against it with a real Azure OpenAI model instead of demo mode:
+To develop against a real AI model instead of demo mode — Azure OpenAI, or
+[Groq](https://console.groq.com) (free, no card, no approval wait) if
+that's not available to you:
 
 ```bash
-make env    # creates .env — fill in your Azure OpenAI credentials
+make env    # creates .env — fill in Azure OpenAI or Groq credentials
 make up     # builds locally and starts the API at http://localhost:8000
 ```
 
@@ -149,10 +151,12 @@ make test-frontend-unit  # Node's built-in test runner, no running stack needed
   injection-style phrases (in English and Italian), but a sufficiently
   novel or obfuscated attempt could still evade detection. Detection is
   a visible red flag, not a hard block — the document is still analyzed.
-- **No fallback AI provider.** If Azure OpenAI is unreachable, the
-  analyzer retries transient failures a couple of times, then fails the
-  whole request — rule-based red flags are not offered as a degraded
-  standalone mode.
+- **No mid-request AI fallback.** The AI provider (Azure OpenAI → Groq →
+  demo mode, see [OVERVIEW.md](OVERVIEW.md)) is picked once at startup
+  from whatever credentials are configured, not per-request. If the
+  active provider is unreachable, the analyzer retries transient failures
+  a couple of times, then fails the whole request — rule-based red flags
+  are not offered as a degraded standalone mode.
 - **Rate limiting is process-local**, not distributed. It resets per
   process and doesn't coordinate across multiple running instances.
 - **Language support is a fixed list** (it/en/fr/de/es) with no

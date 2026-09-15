@@ -14,11 +14,18 @@ param azureOpenAiEndpoint string = ''
 @description('Azure OpenAI API key. Leave empty to run in demo mode.')
 param azureOpenAiApiKey string = ''
 
-@description('Azure OpenAI deployment name')
-param azureOpenAiDeployment string = 'gpt-4o-mini'
+@description('Azure OpenAI deployment name -- must exist on the resource above (check "Model deployments" in Azure AI Foundry; the available catalog changes over time)')
+param azureOpenAiDeployment string = 'gpt-5-mini'
 
 @description('Azure OpenAI API version')
 param azureOpenAiApiVersion string = '2024-08-01-preview'
+
+@secure()
+@description('Groq API key (free, no approval wait, OpenAI-compatible -- see console.groq.com). Used only if Azure OpenAI is left empty. Leave empty to run in demo mode.')
+param groqApiKey string = ''
+
+@description('Groq model name')
+param groqModel string = 'openai/gpt-oss-20b'
 
 var logAnalyticsName = '${namePrefix}-logs'
 var containerAppEnvName = '${namePrefix}-env'
@@ -75,6 +82,8 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_OPENAI_API_KEY', value: azureOpenAiApiKey }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
             { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenAiApiVersion }
+            { name: 'GROQ_API_KEY', value: groqApiKey }
+            { name: 'GROQ_MODEL', value: groqModel }
           ]
         }
       ]

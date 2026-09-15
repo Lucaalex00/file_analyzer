@@ -40,20 +40,31 @@ automatically when the request completes. `POST /analyze` rejects oversized
 uploads from `Content-Length` before reading the body where the client provides
 it, with a post-read size check as a fallback.
 
-## Demo mode
+## AI provider selection: Azure OpenAI → Groq → demo mode
 
-`Settings.is_demo_mode` is `True` whenever `AZURE_OPENAI_ENDPOINT`/
-`AZURE_OPENAI_API_KEY` aren't set. In that case `src/api/dependencies.py`
-wires in `DemoAIClient` (`src/analyzer/demo_client.py`) instead of a real
-`AzureOpenAI` client — it duck-types the same `client.chat.completions.create(...)`
-surface, so `DocumentAnalyzer`/`DocumentComparator` need no changes at all to
-support it. Red flags stay real: `DemoAIClient` runs the same
-`detect_rule_based_flags()` against the actual extracted text; only the
-narrative explanation/comparison is templated, and it always says so
-explicitly — in the API response, a startup log warning, `/health`'s
-`demo_mode` field, and a banner in the UI. This is what makes
-`docker run ghcr.io/.../file_analyzer:latest` usable with zero setup: the
-whole pipeline runs for real except the AI-written prose.
+`src/api/dependencies.py:_build_ai_client_and_model()` picks one of three
+providers, in this order:
+
+1. **Azure OpenAI**, if `AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` are
+   set.
+2. **Groq**, if `GROQ_API_KEY` is set (and Azure isn't) — free, no
+   approval wait, OpenAI-API-compatible, so the plain `openai.OpenAI`
+   client works unmodified with `base_url` pointed at Groq. A real AI
+   provider usable while an Azure OpenAI quota request is pending.
+3. **Demo mode** otherwise — `DemoAIClient` (`src/analyzer/demo_client.py`)
+   duck-types the same `client.chat.completions.create(...)` surface, so
+   `DocumentAnalyzer`/`DocumentComparator` need no changes at all to
+   support it. Red flags stay real: `DemoAIClient` runs the same
+   `detect_rule_based_flags()` against the actual extracted text; only the
+   narrative explanation/comparison is templated, and it always says so
+   explicitly — in the API response, a startup log warning, `/health`'s
+   `demo_mode`/`ai_provider` fields, and a banner in the UI. This is what
+   makes `docker run ghcr.io/.../file_analyzer:latest` usable with zero
+   setup: the whole pipeline runs for real except the AI-written prose.
+
+`Settings.ai_provider` exposes which of the three is active
+(`"azure_openai"` | `"groq"` | `"demo"`) without needing to inspect
+credentials directly.
 
 ## PDF table reconstruction
 

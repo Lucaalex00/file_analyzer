@@ -72,6 +72,7 @@ def test_max_file_size_bytes_uses_env_var_when_set(monkeypatch):
 def test_is_demo_mode_when_azure_openai_endpoint_missing(monkeypatch):
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "")
     monkeypatch.setenv("AZURE_OPENAI_API_KEY", "some-key")
+    monkeypatch.setenv("GROQ_API_KEY", "")
 
     settings = Settings()
 
@@ -81,6 +82,7 @@ def test_is_demo_mode_when_azure_openai_endpoint_missing(monkeypatch):
 def test_is_demo_mode_when_azure_openai_api_key_missing(monkeypatch):
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com/")
     monkeypatch.setenv("AZURE_OPENAI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY", "")
 
     settings = Settings()
 
@@ -94,3 +96,69 @@ def test_not_demo_mode_when_both_azure_openai_settings_present(monkeypatch):
     settings = Settings()
 
     assert settings.is_demo_mode is False
+
+
+def test_not_demo_mode_when_only_groq_api_key_present(monkeypatch):
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY", "some-groq-key")
+
+    settings = Settings()
+
+    assert settings.is_demo_mode is False
+
+
+def test_demo_mode_when_neither_azure_nor_groq_configured(monkeypatch):
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY", "")
+
+    settings = Settings()
+
+    assert settings.is_demo_mode is True
+
+
+def test_groq_model_defaults_when_env_var_absent(monkeypatch):
+    monkeypatch.delenv("GROQ_MODEL", raising=False)
+
+    settings = Settings()
+
+    assert settings.groq_model == "openai/gpt-oss-20b"
+
+
+def test_groq_model_uses_env_var_when_set(monkeypatch):
+    monkeypatch.setenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+    settings = Settings()
+
+    assert settings.groq_model == "llama-3.3-70b-versatile"
+
+
+def test_ai_provider_prefers_azure_over_groq(monkeypatch):
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com/")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "some-key")
+    monkeypatch.setenv("GROQ_API_KEY", "some-groq-key")
+
+    settings = Settings()
+
+    assert settings.ai_provider == "azure_openai"
+
+
+def test_ai_provider_is_groq_when_only_groq_configured(monkeypatch):
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY", "some-groq-key")
+
+    settings = Settings()
+
+    assert settings.ai_provider == "groq"
+
+
+def test_ai_provider_is_demo_when_nothing_configured(monkeypatch):
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY", "")
+
+    settings = Settings()
+
+    assert settings.ai_provider == "demo"
