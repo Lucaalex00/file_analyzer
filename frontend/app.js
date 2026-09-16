@@ -110,6 +110,26 @@ function exampleLabel(example) {
   return translated && translated !== key ? translated : example.filename;
 }
 
+// The example and docs buttons are built from server data, so
+// applyTranslations (which walks data-i18n elements) can't relabel them.
+let loadedExamples = [];
+let loadedDocs = [];
+
+function relabelDynamicButtons() {
+  loadedExamples.forEach((example) => {
+    const button = examplesButtonsEl.querySelector(`[data-example-id="${example.id}"]`);
+    if (button) {
+      button.textContent = exampleLabel(example);
+    }
+  });
+  loadedDocs.forEach((doc) => {
+    const tab = docsTabsEl.querySelector(`[data-doc-id="${doc.id}"]`);
+    if (tab) {
+      tab.textContent = docTitle(doc);
+    }
+  });
+}
+
 async function loadExamples() {
   try {
     const response = await fetch("/api/examples");
@@ -121,6 +141,7 @@ async function loadExamples() {
       return;
     }
 
+    loadedExamples = examples;
     examplesButtonsEl.innerHTML = "";
     examples.forEach((example) => {
       const button = document.createElement("button");
@@ -183,6 +204,7 @@ async function loadDocsIndex() {
     return;
   }
   const { documents } = await response.json();
+  loadedDocs = documents;
   docsTabsEl.innerHTML = "";
   documents.forEach((document_, index) => {
     const tab = document.createElement("button");
@@ -253,6 +275,8 @@ function applyLanguageToUI() {
   const docsToggleLabel = FileAnalyzerI18n.translate(language, "docsToggle");
   docsToggleButton.title = docsToggleLabel;
   docsToggleButton.setAttribute("aria-label", docsToggleLabel);
+
+  relabelDynamicButtons();
 }
 
 function initLanguage() {

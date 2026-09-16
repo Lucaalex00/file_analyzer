@@ -5,17 +5,23 @@ plain-language explanation, a summary, and a list of things worth paying
 attention to, as a downloadable PDF report. No account, no database, nothing
 stored: the file exists only for the duration of the request.
 
-![Uploading a lease, reviewing the extracted text, and getting a plain-language analysis with red flags](docs/screenshots/demo.gif)
+![One click on a sample lease: the extracted text appears, then the AI explanation fills in beside it](docs/screenshots/demo.gif)
 
 ## Live demo
 
 **[filean-app.kindground-bef02a33.swedencentral.azurecontainerapps.io](https://filean-app.kindground-bef02a33.swedencentral.azurecontainerapps.io)**
 — deployed on Azure Container Apps (see [`infra/`](infra/)), running with
-a real Azure OpenAI model attached. No install, nothing to run — just
-open it and try a file. Scales to zero when idle, so the first request
-after a while can take a few seconds to wake up. Rate-limited per IP
-(20 requests/minute) — if that's ever exhausted or the deploy is put back
-into demo mode, explanations still work, just simulated.
+a real Azure OpenAI model attached. Nothing to install and nothing to
+upload: the home page offers a couple of sample documents, and one click
+runs the whole pipeline on one of them. The 📄 button in the header opens
+this README and the architecture notes without leaving the page.
+
+It scales to zero when idle, so the first request after a while can take a
+few seconds to wake up, and a full analysis takes ~15s (extraction plus one
+LLM call). Two limits keep a public link from costing without bound: 20
+requests/minute per IP, and 60 paid AI calls per hour across all visitors
+(`AI_HOURLY_BUDGET`). Past either one the app doesn't break — it serves
+simulated explanations, labeled as such in the UI and in `/health`.
 
 ## Quick start
 
@@ -60,8 +66,9 @@ curl -F "file=@examples/sample_lease_contract.txt" http://localhost:8000/analyze
 ```
 
 Report PDFs in [`examples/`](examples/) are generated on demand — run
-`python scripts/generate_examples.py` with your own Azure OpenAI
-credentials (see [`examples/README.md`](examples/README.md)).
+`docker compose exec api python -m scripts.generate_examples` with your own
+Azure OpenAI or Groq credentials (see
+[`examples/README.md`](examples/README.md)).
 
 ## What it does
 
@@ -73,6 +80,9 @@ credentials (see [`examples/README.md`](examples/README.md)).
   rule-based pre-check (auto-renewal, penalties, tight deadlines, phishing-style
   urgency/credential requests)
 - Highlights each flagged passage back in the original text (explainability)
+- Shows all of it in one view that fills in stage by stage: the extracted
+  text across the top, the original document rendered on the left (for PDFs
+  and images), the explanation on the right
 - Returns the analysis as a PDF report, as Markdown, or as structured JSON
 - Compares two versions of a document and reports what changed
 - Analyzes several files in one batch request
@@ -93,6 +103,15 @@ credentials (see [`examples/README.md`](examples/README.md)).
 
 All of the above accept an optional `language` field (`it` default) and are
 rate-limited per client IP (`RATE_LIMIT_PER_MINUTE`, default 20/minute).
+Paid AI calls are additionally capped across all callers
+(`AI_HOURLY_BUDGET`, default 60/hour); past the cap the same endpoints
+answer with simulated explanations rather than failing.
+
+Two more routes exist only to serve the web UI: `GET /api/examples` lists
+the bundled sample documents (and `/api/examples/{id}` returns one), and
+`GET /api/docs` lists the project documents the in-app viewer renders (and
+`/api/docs/{id}` returns one as HTML). Both resolve the id against a fixed
+allowlist rather than building a path from the request.
 
 ## CLI
 
@@ -131,8 +150,8 @@ make test-frontend-unit  # Node's built-in test runner, no running stack needed
 
 | | |
 |---|---|
-| ![Home page, empty upload state](docs/screenshots/01-home.png) Upload form, before any file is selected | ![Extracted text preview](docs/screenshots/02-extracted-preview.png) Extracted text preview, shown before submitting |
-| ![Analysis result with highlighted red flags](docs/screenshots/03-analysis-result.png) Plain-language analysis, with matched red flags highlighted in the source text | ![Dark theme](docs/screenshots/04-dark-theme.png) The same view in dark mode |
+| ![Home page, empty upload state](docs/screenshots/01-home.png) The upload form, with sample documents offered below it | ![Extracted text preview](docs/screenshots/02-extracted-preview.png) Extracted text, shown as soon as a file is picked — before any AI call |
+| ![Analysis result with the original document and the explanation side by side](docs/screenshots/03-analysis-result.png) The workspace for a PDF: extracted text above, the original document left, the explanation right | ![Dark theme](docs/screenshots/04-dark-theme.png) The same view in dark mode |
 
 ## Limitations
 
@@ -159,8 +178,10 @@ make test-frontend-unit  # Node's built-in test runner, no running stack needed
   active provider is unreachable, the analyzer retries transient failures
   a couple of times, then fails the whole request — rule-based red flags
   are not offered as a degraded standalone mode.
-- **Rate limiting is process-local**, not distributed. It resets per
-  process and doesn't coordinate across multiple running instances.
+- **Rate limiting and the hourly AI budget are process-local**, not
+  distributed. Both reset when the process does — which, on a scale-to-zero
+  deployment, happens whenever the app has been idle — and neither
+  coordinates across multiple running instances.
 - **Language support is a fixed list** (it/en/fr/de/es) with no
   auto-detection of the source document's language.
 

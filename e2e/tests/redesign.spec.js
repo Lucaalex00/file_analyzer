@@ -256,6 +256,20 @@ test("one click on an example document runs the whole analysis", async ({ page }
   await expect(page.locator("a[data-role=download-link]")).toBeVisible();
 });
 
+test("buttons built from server data are relabelled when the language changes", async ({ page }) => {
+  await page.goto("/");
+
+  const firstExample = page.locator("[data-role=examples-buttons] button").first();
+
+  await page.locator("[data-role=language-select]").selectOption("it");
+  await expect(firstExample).toHaveText("Contratto di locazione");
+
+  // These labels come from /api/examples, so applyTranslations (which only
+  // walks data-i18n elements) can't reach them on its own.
+  await page.locator("[data-role=language-select]").selectOption("en");
+  await expect(firstExample).toHaveText("Lease contract");
+});
+
 test("the docs button opens the project's own README in a panel", async ({ page }) => {
   await page.goto("/");
 

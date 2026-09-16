@@ -66,6 +66,37 @@ providers, in this order:
 (`"azure_openai"` | `"groq"` | `"demo"`) without needing to inspect
 credentials directly.
 
+## Bounding what a public link can spend
+
+Per-IP rate limiting bounds a single visitor, not the total bill of a link
+anyone can open against a billed model. `AIBudget` (`src/api/ai_budget.py`)
+counts paid calls in a rolling one-hour window (`AI_HOURLY_BUDGET`, default
+60; 0 disables it). `BudgetedAIClient` (`src/analyzer/budgeted_client.py`)
+wraps whichever real provider was selected and, once the window is full,
+routes calls to `DemoAIClient` instead — so the site stays usable for
+whoever opens the link next, with explanations that are simulated and say
+so (`/health` reports `demo_mode: true`, and the UI banner follows).
+
+The analyzer and comparator know nothing about any of this: the wrapper
+duck-types the same `client.chat.completions.create(...)` surface, the same
+trick demo mode already relied on.
+
+Both the budget and the rate limiter live in process memory, so they reset
+when the process does — on a scale-to-zero deployment that happens after
+every idle period, which makes this a brake rather than a hard ceiling.
+
+## Serving the project's own files to the UI
+
+Two small read-only endpoints back the web UI: `src/api/project_docs.py`
+renders this file and the README to HTML for the in-app docs panel
+(rewriting repo-relative links to GitHub so they still resolve), and
+`src/api/example_documents.py` serves the bundled sample documents behind
+the home page's one-click demos.
+
+Both resolve the id from the URL against a fixed allowlist and never build
+a filesystem path from the request — the difference between an endpoint
+that serves three known documents and one that reads arbitrary files.
+
 ## PDF table reconstruction
 
 When `PdfExtractor`'s primary text layer looks corrupted (`_looks_corrupted()`
