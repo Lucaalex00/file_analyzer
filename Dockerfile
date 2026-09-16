@@ -14,6 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
 COPY frontend/ frontend/
+# Served at runtime by the in-app docs viewer (src/api/project_docs.py) and
+# the one-click examples (src/api/example_documents.py), so these ship with
+# the image rather than only living in the repo.
+COPY README.md OVERVIEW.md ./
+COPY examples/ examples/
 
 RUN useradd --create-home --shell /bin/false appuser && chown -R appuser:appuser /app
 USER appuser

@@ -26,4 +26,13 @@ services:
       # and somewhere to write its output.
       - ./scripts:/app/scripts
       - ./examples:/app/examples
+      # Tests aren't in the image either. Mounting them (rather than copying
+      # them in by hand) is what keeps a stale duplicate from accumulating
+      # inside the container and silently inflating the test count.
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
+      # Rendered by the in-app docs viewer; mounted so edits show up without
+      # a rebuild (they're COPYed into the image for production).
+      - ./README.md:/app/README.md
+      - ./OVERVIEW.md:/app/OVERVIEW.md
     command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -17,3 +17,6 @@ azure-functions==1.21.3
 slowapi==0.1.9
 pytesseract==0.3.13
 Pillow==12.3.0
+# Renders the project's own README/OVERVIEW for the in-app docs viewer
+# (src/api/project_docs.py) -- not used for anything user-supplied.
+markdown==3.7

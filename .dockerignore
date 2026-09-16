@@ -2,7 +2,6 @@
 .github/
 .claude/
 docs/
-examples/
 infra/
 scripts/
 tests/
@@ -18,6 +17,9 @@ htmlcov/
 .env
 .env.example
 *.md
+# ...except the two the in-app docs viewer renders at runtime.
+!README.md
+!OVERVIEW.md
 docker-compose*.yml
 Dockerfile
 .dockerignore

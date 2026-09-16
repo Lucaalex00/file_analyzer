@@ -60,6 +60,7 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-15 — Fix: asset statici senza header di cache](2026-09-15-fix-cache-asset-statici.md)
 - [2026-09-15 — UX: documento originale e report affiancati](2026-09-15-confronto-documento-report.md)
 - [2026-09-15 — Redesign: il workspace "libro" che si popola a tappe](2026-09-15-workspace-immersivo.md)
+- [2026-09-16 — Demo leggibile in trenta secondi: esempi, docs in-app, tetto di spesa](2026-09-16-demo-per-chi-valuta.md)
 
 ## Other
 

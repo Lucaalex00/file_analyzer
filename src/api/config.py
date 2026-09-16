@@ -16,6 +16,11 @@ class Settings:
         self.max_file_size_bytes = int(os.environ.get("MAX_FILE_SIZE_BYTES") or 10 * 1024 * 1024)
         self.rate_limit_per_minute = int(os.environ.get("RATE_LIMIT_PER_MINUTE") or 20)
         self.max_batch_files = int(os.environ.get("MAX_BATCH_FILES") or 5)
+        # Total paid AI calls allowed per rolling hour, across all visitors.
+        # Per-IP rate limiting bounds one visitor; this bounds the bill for a
+        # public demo link. 0 disables the cap. Past it the app serves
+        # simulated explanations instead of failing -- see ai_budget.py.
+        self.ai_hourly_budget = int(os.environ.get("AI_HOURLY_BUDGET") or 60)
         self.report_brand_name = os.environ.get("REPORT_BRAND_NAME") or "File Analyzer"
         self.report_accent_color = os.environ.get("REPORT_ACCENT_COLOR") or "#2563eb"
 

@@ -30,6 +30,13 @@ const analysisSummaryEl = document.querySelector("[data-role=analysis-summary]")
 const analysisExplanationEl = document.querySelector("[data-role=analysis-explanation]");
 const analysisRedFlagsEl = document.querySelector("[data-role=analysis-red-flags]");
 const demoBannerEl = document.getElementById("demo-banner");
+const examplesEl = document.querySelector("[data-role=examples]");
+const examplesButtonsEl = document.querySelector("[data-role=examples-buttons]");
+const docsToggleButton = document.getElementById("docs-toggle");
+const docsOverlayEl = document.querySelector("[data-role=docs-overlay]");
+const docsCloseButton = document.querySelector("[data-role=docs-close]");
+const docsTabsEl = document.querySelector("[data-role=docs-tabs]");
+const docsBodyEl = document.querySelector("[data-role=docs-body]");
 
 const HISTORY_MAX_ENTRIES = 10;
 const THEME_STORAGE_KEY = "file-analyzer-theme";
@@ -93,11 +100,172 @@ themeToggleButton.addEventListener("click", () => {
   applyTheme(current === "dark" ? "light" : "dark");
 });
 
+// ---- One-click example documents ----
+
+const EXAMPLE_LABEL_KEYS = { lease: "exampleLease", memo: "exampleMemo", cv: "exampleCv" };
+
+function exampleLabel(example) {
+  const key = EXAMPLE_LABEL_KEYS[example.id];
+  const translated = key && FileAnalyzerI18n.translate(languageSelect.value, key);
+  return translated && translated !== key ? translated : example.filename;
+}
+
+async function loadExamples() {
+  try {
+    const response = await fetch("/api/examples");
+    if (!response.ok) {
+      return;
+    }
+    const { examples } = await response.json();
+    if (examples.length === 0) {
+      return;
+    }
+
+    examplesButtonsEl.innerHTML = "";
+    examples.forEach((example) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = exampleLabel(example);
+      button.dataset.exampleId = example.id;
+      button.addEventListener("click", () => runExample(example));
+      examplesButtonsEl.appendChild(button);
+    });
+    examplesEl.hidden = false;
+  } catch (networkError) {
+    // Examples are a convenience -- the upload form works without them.
+  }
+}
+
+// Loading an example runs the whole thing from a single click: that first
+// click is the only attention a visitor reliably gives us.
+async function runExample(example) {
+  try {
+    const response = await fetch(`/api/examples/${encodeURIComponent(example.id)}`);
+    if (!response.ok) {
+      showError(friendlyErrorMessage(response.status));
+      return;
+    }
+    const blob = await response.blob();
+    const file = new File([blob], example.filename, { type: blob.type });
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    fileInput.files = transfer.files;
+    handleFileSelected();
+    form.requestSubmit();
+  } catch (networkError) {
+    showError(FileAnalyzerI18n.translate(languageSelect.value, "errNetwork"));
+  }
+}
+
+// ---- Docs panel: the project's own README/architecture, read in-app ----
+
+let docsLoaded = false;
+
+// The endpoint's own titles are English; show them in the UI's language when
+// we have a translation, and fall back to the server's title otherwise.
+const DOC_TITLE_KEYS = { readme: "docReadme", overview: "docOverview", limitations: "docLimitations" };
+
+function docTitle(doc) {
+  const key = DOC_TITLE_KEYS[doc.id];
+  if (!key) {
+    return doc.title;
+  }
+  const translated = FileAnalyzerI18n.translate(languageSelect.value, key);
+  return translated === key ? doc.title : translated;
+}
+
+async function loadDocsIndex() {
+  if (docsLoaded) {
+    return;
+  }
+  const response = await fetch("/api/docs");
+  if (!response.ok) {
+    return;
+  }
+  const { documents } = await response.json();
+  docsTabsEl.innerHTML = "";
+  documents.forEach((document_, index) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.textContent = docTitle(document_);
+    tab.dataset.docId = document_.id;
+    tab.setAttribute("aria-selected", String(index === 0));
+    tab.addEventListener("click", () => showDoc(document_.id));
+    docsTabsEl.appendChild(tab);
+  });
+  docsLoaded = true;
+  if (documents.length > 0) {
+    await showDoc(documents[0].id);
+  }
+}
+
+async function showDoc(documentId) {
+  Array.from(docsTabsEl.children).forEach((tab) => {
+    tab.setAttribute("aria-selected", String(tab.dataset.docId === documentId));
+  });
+  const response = await fetch(`/api/docs/${encodeURIComponent(documentId)}`);
+  if (!response.ok) {
+    return;
+  }
+  const { html } = await response.json();
+  // Trusted content: these are the project's own files, rendered server-side
+  // from a fixed allowlist -- never anything a visitor supplied.
+  docsBodyEl.innerHTML = html;
+  docsBodyEl.scrollTop = 0;
+}
+
+function openDocs() {
+  docsOverlayEl.hidden = false;
+  loadDocsIndex();
+  docsCloseButton.focus();
+}
+
+function closeDocs() {
+  docsOverlayEl.hidden = true;
+  docsToggleButton.focus();
+}
+
+docsToggleButton.addEventListener("click", openDocs);
+docsCloseButton.addEventListener("click", closeDocs);
+
+docsOverlayEl.addEventListener("click", (event) => {
+  if (event.target === docsOverlayEl) {
+    closeDocs();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !docsOverlayEl.hidden) {
+    closeDocs();
+  }
+});
+
 function applyLanguageToUI() {
-  FileAnalyzerI18n.applyTranslations(languageSelect.value, document);
-  const themeToggleLabel = FileAnalyzerI18n.translate(languageSelect.value, "themeToggle");
+  const language = languageSelect.value;
+  FileAnalyzerI18n.applyTranslations(language, document);
+  document.documentElement.lang = language;
+
+  // Icon-only buttons carry their label in the tooltip, which
+  // applyTranslations (textContent only) can't reach.
+  const themeToggleLabel = FileAnalyzerI18n.translate(language, "themeToggle");
   themeToggleButton.title = themeToggleLabel;
   themeToggleButton.setAttribute("aria-label", themeToggleLabel);
+  const docsToggleLabel = FileAnalyzerI18n.translate(language, "docsToggle");
+  docsToggleButton.title = docsToggleLabel;
+  docsToggleButton.setAttribute("aria-label", docsToggleLabel);
+}
+
+function initLanguage() {
+  // Start from the browser's language when it's one we support, so a visitor
+  // who doesn't read Italian isn't met with an Italian page. Anything else
+  // falls back to English rather than to the it-first default.
+  const supported = Array.from(languageSelect.options).map((option) => option.value);
+  const preferred = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language])
+    .map((tag) => String(tag || "").slice(0, 2).toLowerCase())
+    .find((tag) => supported.includes(tag));
+
+  languageSelect.value = preferred || "en";
+  applyLanguageToUI();
 }
 
 languageSelect.addEventListener("change", applyLanguageToUI);
@@ -532,6 +700,7 @@ async function checkDemoMode() {
 }
 
 initTheme();
-applyLanguageToUI();
+initLanguage();
 renderHistory();
 checkDemoMode();
+loadExamples();

@@ -26,7 +26,7 @@ async function analyzeAFile(page) {
     mimeType: "text/plain",
     buffer: Buffer.from("Team, please submit your reports by Friday."),
   });
-  await page.getByRole("button", { name: /analizza/i }).click();
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
   await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
 }
 

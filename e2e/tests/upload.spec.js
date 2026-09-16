@@ -4,7 +4,7 @@ test("home page shows the upload form", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.locator("input[type=file]")).toBeAttached();
-  await expect(page.getByRole("button", { name: /analizza/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /analizza|analyze/i })).toBeVisible();
 });
 
 test("uploading an unsupported file type shows a readable error, not raw JSON", async ({ page }) => {
@@ -15,7 +15,7 @@ test("uploading an unsupported file type shows a readable error, not raw JSON", 
     mimeType: "image/png",
     buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
   });
-  await page.getByRole("button", { name: /analizza/i }).click();
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
 
   const errorLocator = page.locator("[data-role=error-message]");
   await expect(errorLocator).toBeVisible();
@@ -84,7 +84,7 @@ test("successful analysis shows the explanation and offers a download link", asy
     mimeType: "text/plain",
     buffer: Buffer.from("Team, please submit your reports by Friday."),
   });
-  await page.getByRole("button", { name: /analizza/i }).click();
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
 
   await expect(page.locator("[data-role=analysis-summary]")).toContainText("deadline");
 
@@ -126,7 +126,7 @@ test("red flags with a matching quote are highlighted in the extracted text", as
     mimeType: "text/plain",
     buffer: Buffer.from("Team, please submit your reports by Friday."),
   });
-  await page.getByRole("button", { name: /analizza/i }).click();
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
 
   const highlighted = page.locator("[data-role=extracted-text] mark.severity-medium");
   await expect(highlighted).toBeVisible();
@@ -170,7 +170,7 @@ test("the Markdown download button appears after a successful analysis and downl
     mimeType: "text/plain",
     buffer: Buffer.from("Team, please submit your reports by Friday."),
   });
-  await page.getByRole("button", { name: /analizza/i }).click();
+  await page.getByRole("button", { name: /analizza|analyze/i }).click();
 
   const markdownButton = page.locator("[data-role=download-markdown-button]");
   await expect(markdownButton).toBeVisible();

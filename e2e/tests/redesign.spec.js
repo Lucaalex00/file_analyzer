@@ -164,10 +164,10 @@ test("theme toggle switches the data-theme attribute and persists across reload"
 test("switching the language translates the static UI labels", async ({ page }) => {
   await page.goto("/");
 
+  await page.locator("[data-role=language-select]").selectOption("it");
   await expect(page.getByRole("button", { name: "Analizza" })).toBeVisible();
 
   await page.locator("[data-role=language-select]").selectOption("en");
-
   await expect(page.getByRole("button", { name: "Analyze" })).toBeVisible();
 });
 
@@ -239,6 +239,61 @@ test("dragging a file over the dropzone shows an active visual state", async ({ 
 
   await dropzone.dispatchEvent("dragleave", { dataTransfer: await page.evaluateHandle(() => new DataTransfer()) });
   await expect(dropzone).not.toHaveClass(/dropzone--active/);
+});
+
+test("one click on an example document runs the whole analysis", async ({ page }) => {
+  await mockAnalyzeReview(page);
+  await page.goto("/");
+
+  const exampleButtons = page.locator("[data-role=examples-buttons] button");
+  await expect(exampleButtons.first()).toBeVisible();
+
+  await exampleButtons.first().click();
+
+  // No file picking, no second click: the workspace fills in on its own.
+  await expect(page.locator("[data-role=extracted-text]")).toBeVisible();
+  await expect(page.locator("[data-role=analysis-content]")).toBeVisible();
+  await expect(page.locator("a[data-role=download-link]")).toBeVisible();
+});
+
+test("the docs button opens the project's own README in a panel", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("[data-role=docs-overlay]")).toBeHidden();
+
+  await page.locator("[data-role=docs-toggle]").click();
+
+  const body = page.locator("[data-role=docs-body]");
+  await expect(page.locator("[data-role=docs-overlay]")).toBeVisible();
+  await expect(body).toContainText("File Analyzer");
+
+  // Every listed document is reachable, including the architecture write-up.
+  await page.locator("[data-role=docs-tabs] button", { hasText: /how it works|come funziona/i }).click();
+  await expect(body).toContainText("ExtractorFactory");
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator("[data-role=docs-overlay]")).toBeHidden();
+});
+
+test("starts in the browser's language when it is one of the supported ones", async ({ browser }) => {
+  const context = await browser.newContext({ locale: "en-GB" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Analyze" })).toBeVisible();
+  await expect(page.locator("[data-role=language-select]")).toHaveValue("en");
+
+  await context.close();
+});
+
+test("falls back to English rather than Italian for an unsupported browser language", async ({ browser }) => {
+  const context = await browser.newContext({ locale: "ja-JP" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  await expect(page.locator("[data-role=language-select]")).toHaveValue("en");
+
+  await context.close();
 });
 
 test("the history panel is a collapsible accordion", async ({ page }) => {

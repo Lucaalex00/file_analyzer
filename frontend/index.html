@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>File Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%238b5e3c'/%3E%3Cg fill='none' stroke='%23fbf5ea' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M10 9h9l4 4v10a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z'/%3E%3Cpath d='M13 17h6M13 20h4'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
@@ -17,9 +18,26 @@
         <option value="de">Deutsch</option>
         <option value="es">Español</option>
       </select>
+      <button type="button" id="docs-toggle" data-role="docs-toggle" title="Documentazione" aria-label="Documentazione">📄</button>
       <button type="button" id="theme-toggle" data-role="theme-toggle" title="Cambia tema" aria-label="Cambia tema">🌓</button>
     </div>
   </header>
+
+  <div id="docs-overlay" class="docs-overlay" data-role="docs-overlay" hidden>
+    <aside class="docs-panel" role="dialog" aria-modal="true" aria-labelledby="docs-panel-title">
+      <header class="docs-panel__header">
+        <h2 id="docs-panel-title" data-i18n="docsPanelTitle">Come è fatto</h2>
+        <button type="button" class="docs-panel__close" data-role="docs-close" aria-label="Chiudi">✕</button>
+      </header>
+      <nav class="docs-panel__tabs" data-role="docs-tabs"></nav>
+      <div class="docs-panel__body" data-role="docs-body"></div>
+      <footer class="docs-panel__footer">
+        <a href="https://github.com/Lucaalex00/file_analyzer" target="_blank" rel="noopener noreferrer" data-i18n="docsRepoLink">
+          Vedi il codice su GitHub
+        </a>
+      </footer>
+    </aside>
+  </div>
 
   <main>
     <p id="demo-banner" data-role="demo-banner" data-i18n="demoModeBanner" hidden></p>
@@ -35,6 +53,11 @@
       </label>
 
       <button type="submit" data-i18n="analyzeButton">Analizza</button>
+
+      <p class="examples" data-role="examples" hidden>
+        <span class="examples__label" data-i18n="examplesLabel">Non hai un file sottomano? Prova con:</span>
+        <span class="examples__buttons" data-role="examples-buttons"></span>
+      </p>
     </form>
 
     <div id="status" role="status" hidden>

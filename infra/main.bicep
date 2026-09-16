@@ -27,6 +27,9 @@ param groqApiKey string = ''
 @description('Groq model name')
 param groqModel string = 'openai/gpt-oss-20b'
 
+@description('Total paid AI calls allowed per rolling hour across all visitors -- caps what a public demo link can cost. Past it the app serves simulated explanations instead of failing. 0 disables the cap.')
+param aiHourlyBudget int = 60
+
 var logAnalyticsName = '${namePrefix}-logs'
 var containerAppEnvName = '${namePrefix}-env'
 var containerAppName = '${namePrefix}-app'
@@ -97,6 +100,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
             { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenAiApiVersion }
             { name: 'GROQ_MODEL', value: groqModel }
+            { name: 'AI_HOURLY_BUDGET', value: string(aiHourlyBudget) }
           ], azureEnv, groqEnv)
         }
       ]

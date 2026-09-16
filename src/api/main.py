@@ -13,8 +13,14 @@ from slowapi.util import get_remote_address
 
 from src.analyzer.document_analyzer import AnalysisError
 from src.analyzer.document_comparator import ComparisonError, DocumentComparator
+from src.api import example_documents, project_docs
 from src.api.config import Settings, get_settings
-from src.api.dependencies import get_document_comparator, get_extractor_factory, get_pipeline
+from src.api.dependencies import (
+    get_ai_budget,
+    get_document_comparator,
+    get_extractor_factory,
+    get_pipeline,
+)
 from src.extractors.base import ExtractionError
 from src.extractors.factory import ExtractorFactory, UnsupportedFileTypeError
 from src.pipeline import DocumentAnalysisPipeline
@@ -103,7 +109,46 @@ def _report_filename(original_filename: str, extension: str = "pdf") -> str:
 @app.get("/health")
 def health() -> dict:
     settings = get_settings()
-    return {"status": "ok", "demo_mode": settings.is_demo_mode, "ai_provider": settings.ai_provider}
+    # A spent hourly budget serves the same simulated answers as an
+    # unconfigured provider, so it reports as demo mode too -- otherwise the
+    # UI would claim a real model wrote explanations that it didn't.
+    out_of_budget = get_ai_budget().is_exhausted()
+    demo_mode = settings.is_demo_mode or out_of_budget
+    return {
+        "status": "ok",
+        "demo_mode": demo_mode,
+        "ai_provider": "demo" if demo_mode else settings.ai_provider,
+    }
+
+
+@app.get("/api/docs")
+def list_project_docs() -> dict:
+    return {
+        "documents": [
+            {"id": document.id, "title": document.title} for document in project_docs.list_documents()
+        ]
+    }
+
+
+@app.get("/api/docs/{document_id}")
+def read_project_doc(document_id: str) -> dict:
+    document = project_docs.get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="Unknown document")
+    return {"title": document.title, "html": project_docs.render_document(document)}
+
+
+@app.get("/api/examples")
+def list_example_documents() -> dict:
+    return {"examples": [{"id": example.id, "filename": example.filename} for example in example_documents.list_examples()]}
+
+
+@app.get("/api/examples/{example_id}")
+def read_example_document(example_id: str) -> FileResponse:
+    example = example_documents.get_example(example_id)
+    if example is None:
+        raise HTTPException(status_code=404, detail="Unknown example")
+    return FileResponse(example.path, media_type=example.media_type, filename=example.filename)
 
 
 async def _read_within_size_limit(file: UploadFile, settings: Settings) -> bytes:
