@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, FastAPI, uvicorn, pypdf, python-docx, Jinja2 + WeasyPrint (PDF rendering), `openai` SDK (`AzureOpenAI` client), pytest + httpx, Docker/Docker Compose, GitHub Actions, Azure Functions (Python v2, ASGI) + Bicep for the demo deploy.
 
-**Spec:** [docs/2026-08-27-file-analyzer-design.md](../2026-08-27-file-analyzer-design.md)
+**Spec:** [docs/2026-08-27-file-analyzer-design.md](2026-08-27-file-analyzer-design.md)
 
 ## Global Constraints
 

@@ -46,23 +46,34 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-08 — AI call tracing](2026-09-08-ai-call-tracing.md)
 - [2026-09-08 — Demo mode, one-command startup](2026-09-08-demo-mode-one-command.md)
 
-## Repo health & deploy
+## Going live on Azure
 
 - [2026-09-14 — Weak-point analysis, recruiter simplification](2026-09-14-analisi-punti-deboli.md)
-- [2026-09-14 — Real deploy on Azure Container Apps](2026-09-14-deploy-azure-container-apps.md)
+- [2026-09-14 — Real deploy on Azure Container Apps](2026-09-14-deploy-azure-container-apps.md) — Functions couldn't install WeasyPrint's system libraries
 - [2026-09-15 — Azure OpenAI unblocked, httpx fix, Groq integration](2026-09-15-azure-openai-sbloccato.md)
 - [2026-09-15 — Live demo updated with real Azure OpenAI](2026-09-15-live-demo-ai-reale.md)
-- [2026-09-15 — Anti-genericness prompt guardrail, progress UX](2026-09-15-guardrail-prompt-e-progress-ux.md)
-- [2026-09-15 — Fix: script di generazione esempi mai eseguibile](2026-09-15-fix-script-esempi.md)
-- [2026-09-15 — Fix: latenza analisi oltre 30s (reasoning_effort low)](2026-09-15-fix-latenza-analisi.md)
-- [2026-09-15 — Fix: doppia estrazione del documento durante l'analisi](2026-09-15-fix-doppia-estrazione.md)
-- [2026-09-15 — UX: barra di progresso stimata durante l'attesa](2026-09-15-barra-progresso-attesa.md)
-- [2026-09-15 — Fix: asset statici senza header di cache](2026-09-15-fix-cache-asset-statici.md)
-- [2026-09-15 — UX: documento originale e report affiancati](2026-09-15-confronto-documento-report.md)
-- [2026-09-15 — Redesign: il workspace "libro" che si popola a tappe](2026-09-15-workspace-immersivo.md)
-- [2026-09-16 — Demo leggibile in trenta secondi: esempi, docs in-app, tetto di spesa](2026-09-16-demo-per-chi-valuta.md)
-- [2026-09-16 — Cold start: misurarlo prima di pagarlo](2026-09-16-cold-start-misurato.md)
-- [2026-09-16 — Scostamenti dal design iniziale](2026-09-16-scostamenti-dal-design.md) — cosa del design di agosto regge, cosa è cambiato e perché
+
+## Analysis quality and speed
+
+- [2026-09-15 — Anti-genericness prompt guardrail](2026-09-15-guardrail-prompt-e-progress-ux.md)
+- [2026-09-15 — Latency: lowering reasoning_effort](2026-09-15-fix-latenza-analisi.md) — ~25s down to ~13s per call
+- [2026-09-15 — Extracting the same document twice](2026-09-15-fix-doppia-estrazione.md) — the other half of the wait
+- [2026-09-16 — Telling the model today's date](2026-09-16-data-corrente-nel-prompt.md) — found by analysing a real CV
+
+## The interface a reviewer actually sees
+
+- [2026-09-15 — Estimated progress bar](2026-09-15-barra-progresso-attesa.md)
+- [2026-09-15 — Original document beside the report](2026-09-15-confronto-documento-report.md)
+- [2026-09-15 — The "book" workspace that fills in stage by stage](2026-09-15-workspace-immersivo.md)
+- [2026-09-16 — Readable in thirty seconds: examples, in-app docs, spend cap](2026-09-16-demo-per-chi-valuta.md)
+
+## Repo health
+
+- [2026-09-15 — The example-generation script had never been runnable](2026-09-15-fix-script-esempi.md)
+- [2026-09-15 — Static assets served without cache headers](2026-09-15-fix-cache-asset-statici.md) — stale CSS survived deploys
+- [2026-09-16 — Dev image stage, social preview, viewport](2026-09-16-rifiniture-dev-stage-e-anteprima.md)
+- [2026-09-16 — Cold start: measuring it before paying for it](2026-09-16-cold-start-misurato.md) — including the measurement that was wrong
+- [2026-09-16 — Drift from the original design](2026-09-16-scostamenti-dal-design.md) — what August's design still holds, what changed and why
 
 ## Other
 
