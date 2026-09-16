@@ -62,6 +62,7 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-15 — Redesign: il workspace "libro" che si popola a tappe](2026-09-15-workspace-immersivo.md)
 - [2026-09-16 — Demo leggibile in trenta secondi: esempi, docs in-app, tetto di spesa](2026-09-16-demo-per-chi-valuta.md)
 - [2026-09-16 — Cold start: misurarlo prima di pagarlo](2026-09-16-cold-start-misurato.md)
+- [2026-09-16 — Scostamenti dal design iniziale](2026-09-16-scostamenti-dal-design.md) — cosa del design di agosto regge, cosa è cambiato e perché
 
 ## Other
 
