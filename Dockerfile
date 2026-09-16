@@ -1,8 +1,11 @@
 FROM python:3.12-slim
 
+# libffi-dev is deliberately absent: it ships compiler headers needed to
+# build cffi, not to run it -- the prebuilt wheel links against the libffi
+# runtime that's already here. The PDF tests cover that this holds.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
-    libffi-dev shared-mime-info fonts-liberation \
+    shared-mime-info fonts-liberation \
     tesseract-ocr \
     tesseract-ocr-ita \
     && rm -rf /var/lib/apt/lists/*

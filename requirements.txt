@@ -1,5 +1,9 @@
 fastapi==0.115.0
-uvicorn[standard]==0.32.0
+# Plain uvicorn, not [standard]: that extra pulls uvloop, httptools,
+# websockets, watchfiles and PyYAML (~35MB) for throughput this app never
+# needs -- a request here spends ~12s waiting on an LLM. The one piece that
+# is useful locally, watchfiles for --reload, lives in requirements-dev.txt.
+uvicorn==0.32.0
 pydantic==2.9.2
 python-docx==1.1.2
 pypdf==5.0.1
@@ -13,7 +17,6 @@ openai==1.51.0
 # openai SDK is upgraded.
 httpx<0.28
 python-multipart==0.0.12
-azure-functions==1.21.3
 slowapi==0.1.9
 pytesseract==0.3.13
 Pillow==12.3.0
