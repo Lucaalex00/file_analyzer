@@ -1,32 +1,31 @@
-"""Regenerate the example PDF reports in examples/ by running the real pipeline
-against the sample input files. Requires a working .env with real Azure OpenAI
-credentials — this is a manual/local step, not run in CI.
+"""Regenerate the example PDF reports committed in examples/.
 
-Usage: python scripts/generate_examples.py
+Runs the real pipeline against every bundled sample, so the repo shows real
+output to someone browsing it without any credentials configured. Needs a
+working .env with real Azure OpenAI or Groq credentials -- a manual step,
+never run in CI.
+
+The sample list comes from src/api/example_documents.py, the same allowlist
+the web UI offers, so the two can't drift apart.
+
+Usage: docker compose exec api python -m scripts.generate_examples
 """
 
-from pathlib import Path
-
 from src.api.dependencies import get_pipeline
-
-EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
-
-SAMPLE_FILES = [
-    "sample_lease_contract.txt",
-    "sample_work_memo.txt",
-]
+from src.api.example_documents import list_examples
 
 
 def main() -> None:
     pipeline = get_pipeline()
 
-    for filename in SAMPLE_FILES:
-        source_path = EXAMPLES_DIR / filename
-        file_bytes = source_path.read_bytes()
+    for example in list_examples():
+        pdf_bytes = pipeline.run(
+            file_bytes=example.path.read_bytes(),
+            filename=example.filename,
+            content_type=example.media_type,
+        )
 
-        pdf_bytes = pipeline.run(file_bytes=file_bytes, filename=filename, content_type="text/plain")
-
-        output_path = source_path.with_suffix(".report.pdf")
+        output_path = example.path.with_suffix(".report.pdf")
         output_path.write_bytes(pdf_bytes)
         print(f"Wrote {output_path}")
 

@@ -65,10 +65,11 @@ Or try it from the command line:
 curl -F "file=@examples/sample_lease_contract.txt" http://localhost:8000/analyze -o report.pdf
 ```
 
-Report PDFs in [`examples/`](examples/) are generated on demand — run
-`docker compose exec api python -m scripts.generate_examples` with your own
-Azure OpenAI or Groq credentials (see
-[`examples/README.md`](examples/README.md)).
+[`examples/`](examples/) holds each sample document next to the PDF report
+the real pipeline produced from it, committed so the repo shows actual
+output with no credentials configured. Regenerate them with your own
+credentials via `docker compose exec api python -m scripts.generate_examples`
+(see [`examples/README.md`](examples/README.md)).
 
 ## What it does
 
