@@ -1,6 +1,11 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      # The dev stage is production plus the test tooling, so
+      # `docker compose exec api pytest` works right after a clone. The
+      # image CI publishes is the production stage, without any of it.
+      target: dev
     ports:
       # Host-side port is configurable (HOST_PORT env var, default 8000) --
       # the container's own port stays 8000 regardless.

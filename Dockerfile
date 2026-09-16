@@ -1,4 +1,7 @@
-FROM python:3.12-slim
+# Stage order matters: a plain `docker build` (what CI publishes with) takes
+# the LAST stage, so production has to come last -- `dev` sits in the middle
+# and is opted into with --target dev, which docker-compose.yml does.
+FROM python:3.12-slim AS base
 
 # libffi-dev is deliberately absent: it ships compiler headers needed to
 # build cffi, not to run it -- the prebuilt wheel links against the libffi
@@ -32,3 +35,17 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)" || exit 1
 
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+# Adds the test tooling, so `docker compose exec api pytest` works straight
+# after a clone without a local Python environment -- and keeps working
+# across rebuilds, which installing by hand into a running container did not.
+FROM base AS dev
+USER root
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
+USER appuser
+
+
+# The published image: production only, no test tooling.
+FROM base AS runtime

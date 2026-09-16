@@ -140,11 +140,17 @@ See [OVERVIEW.md](OVERVIEW.md) for the full technical breakdown, and
 ## Development
 
 ```bash
-make test               # pytest
+make test                # pytest inside the running container — no local Python needed
+make test-local          # pytest on the host (needs a venv with requirements-dev.txt)
 make lint                # ruff
 make test-e2e            # Playwright, against the running stack (run `make up` first)
 make test-frontend-unit  # Node's built-in test runner, no running stack needed
 ```
+
+`make up` builds the Dockerfile's `dev` stage, which is the production image
+plus the test tooling — so the backend suite runs right after a clone with
+nothing installed locally. The image CI publishes is the production stage,
+without any of it.
 
 ## Screenshots
 

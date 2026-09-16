@@ -31,12 +31,26 @@ A regime, con i layer già sul nodo:
 |---|---|
 | Cold start totale (richiesta a freddo, scale-to-zero) | **~19s** |
 | di cui rete (DNS + TCP + TLS) | 0,35s |
-| Avvio della sola app, immagine già locale | **~10,7s** |
+| Avvio container completo fino alla prima risposta | ~3,5s |
+| di cui overhead di Docker Desktop su Windows (inesistente su Azure) | ~1,5s |
+| Import dell'intera applicazione (`src.api.main`) | **1,35s** |
+| Somma di tutti gli import pesanti | 1,9s (weasyprint 675ms, openai 623ms, resto trascurabile) |
 
-Quindi circa **11 dei 19 secondi sono avvio Python nostro**, non
-orchestrazione di Azure: import pesanti (WeasyPrint e le sue dipendenze
-font, pdfplumber/pdfminer, openai, pytesseract) pagati tutti al caricamento
-del modulo, prima che uvicorn possa rispondere a qualsiasi cosa.
+**Circa 2 dei 19 secondi sono nostri.** Gli altri ~17 sono piattaforma:
+allocazione del nodo, pull e mount dell'immagine, avvio del container.
+
+### Una misura sbagliata, e perché
+
+La prima volta avevo misurato 10,7s di avvio dell'app e concluso che oltre
+metà del cold start fosse codice nostro. Era un artefatto: quella misura era
+la prima esecuzione **subito dopo la build**, con l'immagine ancora fredda e
+Docker Desktop che si stava scaldando. Ripetuta a immagine calda: 3,5s.
+
+La conseguenza pratica è opposta a quella che avevo tratto: rendere pigri gli
+import di WeasyPrint & co. risparmierebbe frazioni di secondo su diciannove,
+e **non vale la modifica**. È il motivo per cui questa pagina esiste — la
+prima misura plausibile aveva mandato l'ottimizzazione nella direzione
+sbagliata.
 
 ## Cosa è stato fatto
 
@@ -51,11 +65,15 @@ dell'immagine non è la leva.
 
 ## Cosa resta sul tavolo
 
-1. **Import pigri** per i moduli pesanti (WeasyPrint sopra tutti), così
-   uvicorn risponde subito e il costo si paga alla prima generazione di PDF.
-   È la leva vera sugli ~11s, ed è gratis.
-2. **`minReplicas: 1`** se si vuole azzerare il cold start accettandone il
-   costo; con una replica sempre accesa il tetto orario delle chiamate AI
-   smette anche di azzerarsi a ogni riavvio, diventando un tetto vero invece
-   che un freno.
-3. **Fasce orarie** via job schedulato, come compromesso.
+Visto che il codice vale ~2 dei 19 secondi, non esiste una leva gratuita che
+sposti davvero l'ago. Restano solo scelte che costano:
+
+1. **`minReplicas: 1`**: azzera il cold start, si paga una replica sempre
+   accesa. Con una replica viva il tetto orario delle chiamate AI smette
+   anche di azzerarsi a ogni riavvio, diventando un tetto vero invece che un
+   freno.
+2. **Fasce orarie** via job schedulato che alza e abbassa `minReplicas`:
+   circa metà costo, zero cold start quando serve.
+3. **Non fare nulla** e dirlo: il README già avvisa che la prima richiesta
+   sveglia il servizio. Per un progetto dimostrativo è una posizione
+   difendibile, e costa zero.
