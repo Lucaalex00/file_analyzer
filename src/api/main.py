@@ -40,13 +40,14 @@ app.mount("/static", StaticFiles(directory=_FRONTEND_DIR), name="static")
 
 
 @app.middleware("http")
-async def no_cache_static_assets(request: Request, call_next):
-    # Static assets have no versioned filenames, so without an explicit
-    # header browsers apply heuristic caching (based on Last-Modified) and
-    # can silently keep serving a pre-deploy JS/CSS bundle. no-cache forces
-    # revalidation (a cheap 304 via ETag) on every load instead.
+async def no_cache_frontend(request: Request, call_next):
+    # The page and its assets have no versioned filenames, so without an
+    # explicit header browsers apply heuristic caching (based on
+    # Last-Modified) and can silently keep serving a pre-deploy version --
+    # the HTML page included, which then pins every asset it references.
+    # no-cache forces revalidation (a cheap 304 via ETag) on every load.
     response = await call_next(request)
-    if request.url.path.startswith("/static/"):
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
 
