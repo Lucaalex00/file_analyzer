@@ -44,7 +44,7 @@ class ExampleDocument:
 _EXAMPLES: tuple[ExampleDocument, ...] = (
     ExampleDocument(id="lease", filename="sample_lease_contract.txt"),
     ExampleDocument(id="memo", filename="sample_work_memo.txt"),
-    ExampleDocument(id="cv", filename="cv.pdf"),
+    ExampleDocument(id="cv", filename="Luca_Cirio_CV.pdf"),
 )
 
 _BY_ID = {example.id: example for example in _EXAMPLES}

@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import date
 from unittest.mock import MagicMock
 
 import pytest
@@ -90,6 +91,18 @@ class TestBuildUserPrompt:
         prompt = build_user_prompt("short document", language="xx")
 
         assert "xx" in prompt
+
+    def test_tells_the_model_what_todays_date_is(self):
+        # Without it the model judges "expired", "upcoming" and "future-dated"
+        # against its training cutoff, and gets them wrong.
+        prompt = build_user_prompt("short document", today=date(2026, 9, 16))
+
+        assert "2026-09-16" in prompt
+
+    def test_uses_the_real_current_date_by_default(self):
+        prompt = build_user_prompt("short document")
+
+        assert date.today().isoformat() in prompt
 
 
 class TestAnalyze:

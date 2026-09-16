@@ -1,3 +1,5 @@
+from datetime import date
+
 SYSTEM_PROMPT = """You are a document analysis assistant. You read a document and \
 explain it to a non-expert. You must respond with a single JSON object matching \
 exactly this schema:
@@ -57,12 +59,18 @@ LANGUAGE_NAMES = {
 }
 
 
-def build_user_prompt(document_text: str, language: str = "it") -> str:
+def build_user_prompt(document_text: str, language: str = "it", today: date | None = None) -> str:
     language_name = LANGUAGE_NAMES.get(language, language)
     truncated = document_text[:MAX_DOCUMENT_CHARS]
+    current_date = (today or date.today()).isoformat()
     return (
         f"Respond in {language_name} for plain_explanation, summary, and each red flag's "
         "title/description. detected_context, severity, and quote are not translated "
         f"(quote must stay verbatim in the document's own language).\n\n"
+        # Without this the model judges deadlines, expiry and "future" dates
+        # against its training cutoff instead of the real today.
+        f"Today's date is {current_date}. Judge every date in the document against it: "
+        "whether a deadline has passed, is imminent, or is still far off, and whether a "
+        "term or certificate is expired or current.\n\n"
         f"Analyze the following document:\n\n<document>\n{truncated}\n</document>"
     )
