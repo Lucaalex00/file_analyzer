@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down demo test test-local test-e2e test-frontend-unit lint env
+.PHONY: help up down demo test test-local test-e2e test-frontend-unit eval eval-update lint env
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -22,6 +22,12 @@ test: ## Run the backend test suite in the running container (no local Python ne
 
 test-local: ## Run the backend test suite on the host (needs a venv with requirements-dev.txt installed)
 	pytest
+
+eval: ## Run the quality eval against the real model (needs credentials, costs calls)
+	docker compose exec api python -m pytest tests/eval/test_live_quality.py -m live -v
+
+eval-update: ## Re-record the eval baseline from the current run (read the diff before committing)
+	docker compose exec -e UPDATE_EVAL_BASELINE=1 api python -m pytest tests/eval/test_live_quality.py -m live -v
 
 test-e2e: ## Run Playwright e2e tests against the running stack (run `make up` first)
 	cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test

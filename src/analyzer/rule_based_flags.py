@@ -4,7 +4,15 @@ from src.analyzer.schemas import RedFlag
 
 _RULES = [
     {
-        "pattern": re.compile(r"rinnov\w*\s+automatic\w*|renews?\s+automatically", re.IGNORECASE),
+        # Both word orders in both languages, plus the noun form contracts
+        # use as a heading ("Automatic renewal:"). Matching only
+        # "renews automatically" missed the phrasing of a real lease.
+        "pattern": re.compile(
+            r"rinnov\w*\s+automatic\w*|automaticamente\s+si\s+rinnov\w*|"
+            r"renews?\s+automatically|automatically\s+renews?|automatic\s+renewal",
+            re.IGNORECASE,
+        ),
+        "id": "auto_renewal",
         "title": "Rinnovo automatico",
         "description": (
             "Il documento sembra contenere una clausola di rinnovo automatico: "
@@ -14,6 +22,7 @@ _RULES = [
     },
     {
         "pattern": re.compile(r"penalt(?:y|ies)|penale\w*|recesso\s+anticipat\w*", re.IGNORECASE),
+        "id": "penalty",
         "title": "Penale o recesso anticipato",
         "description": (
             "Il documento menziona una penale o una clausola di recesso anticipato: "
@@ -23,6 +32,7 @@ _RULES = [
     },
     {
         "pattern": re.compile(r"entro\s+\d+\s+giorni|within\s+\d+\s+days", re.IGNORECASE),
+        "id": "short_deadline",
         "title": "Scadenza ravvicinata",
         "description": (
             "Il documento indica una scadenza espressa in giorni: "
@@ -36,6 +46,7 @@ _RULES = [
             r"urgent action required|verifica il tuo account|conferma la tua password",
             re.IGNORECASE,
         ),
+        "id": "phishing",
         "title": "Possibile phishing",
         "description": (
             "Il testo usa un linguaggio tipico del phishing (urgenza, richiesta di "
@@ -57,6 +68,7 @@ _RULES = [
             r"you\s+are\s+now\s+|sei\s+ora\s+|system\s+prompt",
             re.IGNORECASE,
         ),
+        "id": "prompt_injection",
         "title": "Possibile tentativo di prompt injection",
         "description": (
             "Il documento contiene una frase che assomiglia a un tentativo di "
@@ -81,6 +93,7 @@ def detect_rule_based_flags(text: str) -> list[RedFlag]:
                     severity=rule["severity"],
                     quote=match.group(0),
                     source="rule",
+                    rule_id=rule["id"],
                 )
             )
     return flags

@@ -146,7 +146,18 @@ make test-local          # pytest on the host (needs a venv with requirements-de
 make lint                # ruff
 make test-e2e            # Playwright, against the running stack (run `make up` first)
 make test-frontend-unit  # Node's built-in test runner, no running stack needed
+make eval                # quality eval against the real model (costs calls)
 ```
+
+`make eval` is the only suite that talks to a real provider. It runs a small
+corpus — every case distilled from a failure this project actually hit — and
+asserts properties checkable against the document itself: is this quote
+really in the text, did the deterministic check fire, does the explanation
+name the document's own figures. Results are compared against a committed
+baseline, so a prompt or model change that degrades quality shows up as a
+diff. It stays out of CI deliberately: real calls are slow, cost money and
+are not deterministic, so a red run there would mean "the model rolled
+badly" as often as "you broke something".
 
 `make up` builds the Dockerfile's `dev` stage, which is the production image
 plus the test tooling — so the backend suite runs right after a clone with
@@ -177,8 +188,10 @@ without any of it.
 - **Prompt injection defenses are heuristic, not exhaustive.** The system
   prompt is hardened and a rule-based detector flags common
   injection-style phrases (in English and Italian), but a sufficiently
-  novel or obfuscated attempt could still evade detection. Detection is
-  a visible red flag, not a hard block — the document is still analyzed.
+  novel or obfuscated attempt could still evade detection. Note that
+  Azure OpenAI's own jailbreak filter often refuses such documents
+  outright: the report is then produced from the rule-based checks alone
+  and says so, rather than failing.
 - **No mid-request AI fallback.** The AI provider (Azure OpenAI → Groq →
   demo mode, see [OVERVIEW.md](OVERVIEW.md)) is picked once at startup
   from whatever credentials are configured, not per-request. If the

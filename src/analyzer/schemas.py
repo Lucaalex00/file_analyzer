@@ -12,6 +12,10 @@ class RedFlag(BaseModel):
     # Defaults to "llm" because the model's JSON never carries this field --
     # it's set by the pipeline when the two sources are merged.
     source: Literal["llm", "rule", "both"] = "llm"
+    # Which deterministic check fired, when one did. Survives both the
+    # merge (where the model's wording wins) and translation, so "did the
+    # safety net catch this?" stays answerable in any language.
+    rule_id: str | None = None
 
 
 class AnalysisResult(BaseModel):

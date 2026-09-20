@@ -1,6 +1,22 @@
 from src.analyzer.rule_based_flags import detect_rule_based_flags
 
 
+def test_detects_auto_renewal_in_the_other_english_word_order():
+    # The live eval caught this: real contracts say "automatically renews"
+    # at least as often as "renews automatically", and the rule saw only one
+    # of the two. The fake-response suite never noticed because its fixture
+    # was written to match the pattern.
+    flags = detect_rule_based_flags("this lease automatically renews for another 12 months")
+
+    assert [flag.rule_id for flag in flags] == ["auto_renewal"]
+
+
+def test_detects_auto_renewal_written_as_a_heading():
+    flags = detect_rule_based_flags("Automatic renewal: unless either party gives notice.")
+
+    assert [flag.rule_id for flag in flags] == ["auto_renewal"]
+
+
 def test_detects_auto_renewal_clause():
     flags = detect_rule_based_flags("This lease renews automatically unless cancelled.")
 

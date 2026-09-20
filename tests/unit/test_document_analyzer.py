@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.analyzer.document_analyzer import AnalysisError, DocumentAnalyzer
+from src.analyzer.document_analyzer import AnalysisError, AnalysisRefusedError, DocumentAnalyzer
 from src.analyzer.prompts import MAX_DOCUMENT_CHARS, SYSTEM_PROMPT, build_user_prompt
 from src.extractors.base import RawText
 
@@ -262,6 +262,51 @@ class TestAnalyze:
 
     def test_gives_up_after_exhausting_retries_on_malformed_output(self):
         client = make_client(response_content="not json at all")
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
+
+        with pytest.raises(AnalysisError):
+            analyzer.analyze(RawText(content="text", source_filename="doc.txt"))
+
+        assert client.chat.completions.create.call_count == 3
+
+    def test_a_provider_refusal_raises_its_own_error_type(self):
+        # The pipeline degrades to rule-based-only on a refusal, but must not
+        # do that for an ordinary failure, so the two can't share a type.
+        refused = RuntimeError("content_filter")
+        refused.status_code = 400
+        client = make_client(raise_exc=refused)
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
+
+        with pytest.raises(AnalysisRefusedError):
+            analyzer.analyze(RawText(content="text", source_filename="doc.txt"))
+
+    def test_an_exhausted_retry_is_not_a_refusal(self):
+        client = make_client(raise_exc=RuntimeError("timeout"))
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=1)
+
+        with pytest.raises(AnalysisError) as raised:
+            analyzer.analyze(RawText(content="text", source_filename="doc.txt"))
+
+        assert not isinstance(raised.value, AnalysisRefusedError)
+
+    def test_does_not_retry_a_permanent_client_error(self):
+        # Azure OpenAI answers 400 with code=content_filter when its jailbreak
+        # shield trips on a document. Retrying that burns three calls -- and
+        # three units of the hourly budget -- on an outcome that cannot change.
+        refused = RuntimeError("content_filter")
+        refused.status_code = 400
+        client = make_client(raise_exc=refused)
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
+
+        with pytest.raises(AnalysisError):
+            analyzer.analyze(RawText(content="text", source_filename="doc.txt"))
+
+        assert client.chat.completions.create.call_count == 1
+
+    def test_still_retries_rate_limiting_and_server_errors(self):
+        throttled = RuntimeError("rate limited")
+        throttled.status_code = 429
+        client = make_client(raise_exc=throttled)
         analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
 
         with pytest.raises(AnalysisError):

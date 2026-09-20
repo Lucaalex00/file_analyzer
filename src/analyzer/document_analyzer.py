@@ -11,6 +11,34 @@ class AnalysisError(Exception):
     pass
 
 
+class AnalysisRefusedError(AnalysisError):
+    """The provider declined to analyze this document at all.
+
+    Distinct from a failure, because it is a verdict rather than an outage:
+    retrying changes nothing, and the pipeline answers it by falling back to
+    the deterministic checks instead of giving the user nothing.
+    """
+
+
+def _is_retryable(exc: Exception) -> bool:
+    """Whether trying the same request again could plausibly succeed.
+
+    Rate limiting and server-side failures pass; a 4xx does not. Azure
+    OpenAI's jailbreak shield, for instance, answers 400 content_filter on
+    documents that look like prompt-injection attempts -- a verdict that is
+    identical on every retry, so retrying only spends the hourly budget.
+
+    Read off `status_code` rather than the provider's exception classes, so
+    this stays true for the Azure client, the Groq one and the demo one
+    alike; an exception without a status (a timeout, a dropped connection)
+    is treated as retryable.
+    """
+    status = getattr(exc, "status_code", None)
+    if status is None:
+        return True
+    return status == 429 or status >= 500
+
+
 def _ground_quotes(result: AnalysisResult, document_text: str) -> int:
     """Tie each quote back to the document, returning how many couldn't be.
 
@@ -86,16 +114,21 @@ class DocumentAnalyzer:
                     error=exc,
                 )
                 last_error = exc
-            except Exception as exc:  # noqa: BLE001 - any client-side failure is retryable
+            except Exception as exc:  # noqa: BLE001 - the provider's failures aren't a fixed set
+                retryable = _is_retryable(exc)
                 log_ai_attempt(
                     "document_analyzer",
                     self._deployment,
                     attempt + 1,
                     max_attempts,
                     started_at,
-                    "transient_error",
+                    "transient_error" if retryable else "refused",
                     error=exc,
                 )
                 last_error = exc
+                if not retryable:
+                    raise AnalysisRefusedError(
+                        f"The AI provider refused to analyze {raw_text.source_filename!r}"
+                    ) from exc
 
         raise AnalysisError(f"Failed to analyze document {raw_text.source_filename!r}") from last_error
