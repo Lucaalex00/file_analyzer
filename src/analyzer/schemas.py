@@ -8,6 +8,10 @@ class RedFlag(BaseModel):
     description: str
     severity: Literal["low", "medium", "high"]
     quote: str = ""
+    # Who raised it: the model, the rule-based pass, or both independently.
+    # Defaults to "llm" because the model's JSON never carries this field --
+    # it's set by the pipeline when the two sources are merged.
+    source: Literal["llm", "rule", "both"] = "llm"
 
 
 class AnalysisResult(BaseModel):

@@ -50,8 +50,10 @@ class DocumentComparator:
                     "validation_error",
                     error=exc,
                 )
+                # Retried, for the same reason as in document_analyzer.py: a
+                # malformed answer from a stochastic model is often fine on
+                # the next attempt.
                 last_error = exc
-                break  # a bad response won't fix itself on retry
             except Exception as exc:  # noqa: BLE001 - any client-side failure is retryable
                 log_ai_attempt(
                     "document_comparator",

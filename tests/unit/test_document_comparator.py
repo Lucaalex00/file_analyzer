@@ -67,6 +67,22 @@ def test_calls_client_with_low_reasoning_effort_for_latency():
     assert kwargs["extra_body"] == {"reasoning_effort": "low"}
 
 
+def test_retries_when_the_model_answers_out_of_format():
+    client = MagicMock()
+    bad = MagicMock()
+    bad.choices = [MagicMock(message=MagicMock(content="not json at all"))]
+    good = MagicMock()
+    good.choices = [MagicMock(message=MagicMock(content=VALID_RESPONSE_JSON))]
+    client.chat.completions.create.side_effect = [bad, good]
+
+    comparator = DocumentComparator(client=client, deployment="gpt-4o-mini", max_retries=2)
+
+    result = comparator.compare("Version A text", "Version B text")
+
+    assert "renewal" in result.summary.lower()
+    assert client.chat.completions.create.call_count == 2
+
+
 def test_raises_comparison_error_on_invalid_json():
     client = make_client(response_content="not json")
     comparator = DocumentComparator(client=client, deployment="gpt-4o-mini", max_retries=0)

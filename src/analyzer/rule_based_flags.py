@@ -80,6 +80,7 @@ def detect_rule_based_flags(text: str) -> list[RedFlag]:
                     description=rule["description"],
                     severity=rule["severity"],
                     quote=match.group(0),
+                    source="rule",
                 )
             )
     return flags

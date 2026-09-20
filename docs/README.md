@@ -59,6 +59,7 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-15 — Latency: lowering reasoning_effort](2026-09-15-fix-latenza-analisi.md) — ~25s down to ~13s per call
 - [2026-09-15 — Extracting the same document twice](2026-09-15-fix-doppia-estrazione.md) — the other half of the wait
 - [2026-09-16 — Telling the model today's date](2026-09-16-data-corrente-nel-prompt.md) — found by analysing a real CV
+- [2026-09-20 — Four fixes to the AI reliability layer](2026-09-20-affidabilita-ai-correzioni.md) — quote grounding, cross-language merge, retry on malformed output, token accounting
 
 ## The interface a reviewer actually sees
 

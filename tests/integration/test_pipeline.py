@@ -79,6 +79,145 @@ def test_run_with_analysis_merges_rule_based_flags_with_llm_flags():
     assert "Rinnovo automatico" in titles
 
 
+def make_client_returning(payload: dict) -> MagicMock:
+    client = MagicMock()
+    message = MagicMock()
+    message.content = json.dumps(payload)
+    choice = MagicMock()
+    choice.message = message
+    completion = MagicMock()
+    completion.choices = [choice]
+    client.chat.completions.create.return_value = completion
+    return client
+
+
+LEASE_TEXT = b"This lease renews automatically unless cancelled by either party."
+
+
+def test_a_rule_flag_the_model_also_found_is_merged_not_duplicated():
+    # The model's title is free text in the requested language, so matching on
+    # it can't work; what identifies "the same risk" is the passage quoted.
+    client = make_client_returning(
+        {
+            "detected_context": "legal",
+            "plain_explanation": "A lease.",
+            "summary": "A lease that renews on its own.",
+            "red_flags": [
+                {
+                    "title": "Automatic renewal with no notice period",
+                    "description": "The lease renews unless actively cancelled.",
+                    "severity": "medium",
+                    "quote": "renews automatically unless cancelled",
+                }
+            ],
+        }
+    )
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=client, deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, _ = pipeline.run_with_analysis(
+        file_bytes=LEASE_TEXT, filename="lease.txt", content_type="text/plain"
+    )
+
+    renewal_flags = [f for f in analysis.red_flags if "renew" in f.quote.lower()]
+    assert len(renewal_flags) == 1, [f.title for f in analysis.red_flags]
+    # Keeps the model's richer wording, but records that both agreed.
+    assert renewal_flags[0].title == "Automatic renewal with no notice period"
+    assert renewal_flags[0].source == "both"
+
+
+def test_a_rule_flag_the_model_missed_is_added_and_marked_as_rule_based():
+    client = make_client_returning(
+        {
+            "detected_context": "legal",
+            "plain_explanation": "A lease.",
+            "summary": "A lease.",
+            "red_flags": [],
+        }
+    )
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=client, deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, _ = pipeline.run_with_analysis(
+        file_bytes=LEASE_TEXT, filename="lease.txt", content_type="text/plain"
+    )
+
+    assert [f.source for f in analysis.red_flags] == ["rule"]
+
+
+def test_merging_keeps_the_more_severe_of_the_two_verdicts():
+    # The rule calls an early-termination penalty "high"; a model that rated
+    # the same passage "low" must not talk the warning down.
+    client = make_client_returning(
+        {
+            "detected_context": "legal",
+            "plain_explanation": "A lease.",
+            "summary": "A lease.",
+            "red_flags": [
+                {
+                    "title": "Early termination cost",
+                    "description": "There is a penalty.",
+                    "severity": "low",
+                    "quote": "penalty",
+                }
+            ],
+        }
+    )
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=client, deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, _ = pipeline.run_with_analysis(
+        file_bytes=b"Early termination carries a penalty of two months of rent.",
+        filename="lease.txt",
+        content_type="text/plain",
+    )
+
+    penalty_flags = [f for f in analysis.red_flags if "penalty" in f.quote.lower()]
+    assert len(penalty_flags) == 1
+    assert penalty_flags[0].severity == "high"
+    assert penalty_flags[0].source == "both"
+
+
+def test_llm_flags_keep_their_own_source_when_no_rule_matches():
+    client = make_client_returning(
+        {
+            "detected_context": "work",
+            "plain_explanation": "A memo.",
+            "summary": "A memo.",
+            "red_flags": [
+                {
+                    "title": "Vague ownership",
+                    "description": "Nobody is named as responsible.",
+                    "severity": "low",
+                    "quote": "someone should handle this",
+                }
+            ],
+        }
+    )
+    pipeline = DocumentAnalysisPipeline(
+        factory=ExtractorFactory(),
+        analyzer=DocumentAnalyzer(client=client, deployment="gpt-4o-mini"),
+        report_generator=ReportGenerator(),
+    )
+
+    analysis, _ = pipeline.run_with_analysis(
+        file_bytes=b"Team, someone should handle this before Monday.",
+        filename="memo.txt",
+        content_type="text/plain",
+    )
+
+    assert [f.source for f in analysis.red_flags] == ["llm"]
+
+
 def test_run_with_analysis_passes_the_requested_language_to_the_analyzer():
     client = make_fake_openai_client()
     pipeline = DocumentAnalysisPipeline(

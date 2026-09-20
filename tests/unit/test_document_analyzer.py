@@ -168,6 +168,107 @@ class TestAnalyze:
 
         assert client.chat.completions.create.call_count == 2  # initial + 1 retry
 
+    def test_drops_a_quote_the_document_does_not_contain(self):
+        # The schema can only check shape; nothing stopped an invented quote
+        # from reaching the report, where it silently failed to highlight.
+        client = make_client(
+            response_content=json.dumps(
+                {
+                    "detected_context": "legal",
+                    "plain_explanation": "explanation",
+                    "summary": "summary",
+                    "red_flags": [
+                        {
+                            "title": "Penalty",
+                            "description": "There is a penalty.",
+                            "severity": "high",
+                            "quote": "a sentence the document never contained",
+                        }
+                    ],
+                }
+            )
+        )
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini")
+
+        result = analyzer.analyze(RawText(content="Early termination costs two months.", source_filename="d.txt"))
+
+        # The finding survives; only the unverifiable evidence is removed.
+        assert result.red_flags[0].title == "Penalty"
+        assert result.red_flags[0].quote == ""
+
+    def test_keeps_a_quote_that_appears_verbatim(self):
+        client = make_client(
+            response_content=json.dumps(
+                {
+                    "detected_context": "legal",
+                    "plain_explanation": "explanation",
+                    "summary": "summary",
+                    "red_flags": [
+                        {
+                            "title": "Penalty",
+                            "description": "There is a penalty.",
+                            "severity": "high",
+                            "quote": "two months",
+                        }
+                    ],
+                }
+            )
+        )
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini")
+
+        result = analyzer.analyze(RawText(content="Early termination costs two months.", source_filename="d.txt"))
+
+        assert result.red_flags[0].quote == "two months"
+
+    def test_logs_when_a_quote_had_to_be_dropped(self, caplog):
+        client = make_client(
+            response_content=json.dumps(
+                {
+                    "detected_context": "legal",
+                    "plain_explanation": "explanation",
+                    "summary": "summary",
+                    "red_flags": [
+                        {"title": "A", "description": "d", "severity": "low", "quote": "never said this"},
+                        {"title": "B", "description": "d", "severity": "low", "quote": "two months"},
+                    ],
+                }
+            )
+        )
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini")
+
+        with caplog.at_level(logging.INFO, logger="file_analyzer.ai"):
+            analyzer.analyze(RawText(content="Early termination costs two months.", source_filename="d.txt"))
+
+        success = [r for r in caplog.records if r.name == "file_analyzer.ai"][-1]
+        assert success.ai_ungrounded_quotes == 1
+
+    def test_retries_when_the_model_answers_out_of_format(self):
+        # An LLM is stochastic: a malformed answer often isn't malformed on
+        # the next roll, so one bad response shouldn't cost the user the
+        # whole request.
+        client = MagicMock()
+        bad = MagicMock()
+        bad.choices = [MagicMock(message=MagicMock(content="not json at all"))]
+        good = MagicMock()
+        good.choices = [MagicMock(message=MagicMock(content=VALID_RESPONSE_JSON))]
+        client.chat.completions.create.side_effect = [bad, good]
+
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
+
+        result = analyzer.analyze(RawText(content="text", source_filename="doc.txt"))
+
+        assert result.detected_context == "legal"
+        assert client.chat.completions.create.call_count == 2
+
+    def test_gives_up_after_exhausting_retries_on_malformed_output(self):
+        client = make_client(response_content="not json at all")
+        analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
+
+        with pytest.raises(AnalysisError):
+            analyzer.analyze(RawText(content="text", source_filename="doc.txt"))
+
+        assert client.chat.completions.create.call_count == 3
+
     def test_succeeds_after_one_transient_failure(self):
         client = MagicMock()
         message = MagicMock()
@@ -223,7 +324,7 @@ class TestTracing:
         assert [r.ai_outcome for r in records] == ["transient_error", "success"]
         assert [r.ai_attempt for r in records] == [1, 2]
 
-    def test_logs_validation_error_without_retrying(self, caplog):
+    def test_logs_one_validation_error_record_per_attempt(self, caplog):
         client = make_client(response_content="not json at all")
         analyzer = DocumentAnalyzer(client=client, deployment="gpt-4o-mini", max_retries=2)
         raw_text = RawText(content="text", source_filename="doc.txt")
@@ -233,5 +334,4 @@ class TestTracing:
                 analyzer.analyze(raw_text)
 
         records = [r for r in caplog.records if r.name == "file_analyzer.ai"]
-        assert len(records) == 1
-        assert records[0].ai_outcome == "validation_error"
+        assert [r.ai_outcome for r in records] == ["validation_error"] * 3
