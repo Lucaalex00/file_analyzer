@@ -278,9 +278,17 @@ test("shows what the analysis cost, and omits tokens when the provider reports n
   await analyzeAFile(page);
 
   const cost = page.locator("[data-role=analysis-cost]");
-  await expect(cost).toBeVisible();
   await expect(cost).toContainText("3,438");
   await expect(cost).toContainText("11.4");
+
+  // The bug this guards: the line first lived at the bottom of the analysis
+  // pane, which has its own scrollbar, so it sat hundreds of pixels past that
+  // pane's fold and nobody ever saw it. toBeVisible() passed regardless --
+  // it only means "rendered with a box". Being out of that pane is the
+  // property that was actually meant.
+  await expect(page.locator("[data-role=analysis-content] [data-role=analysis-cost]")).toHaveCount(0);
+  await cost.scrollIntoViewIfNeeded();
+  await expect(cost).toBeInViewport();
 });
 
 test("the cost line stays hidden when the run reported no metrics", async ({ page }) => {

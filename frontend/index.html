@@ -138,8 +138,6 @@
                 <p data-role="analysis-explanation"></p>
                 <p class="analysis__label" data-i18n="redFlagsHeading">Punti di attenzione</p>
                 <ul data-role="analysis-red-flags"></ul>
-
-                <p class="analysis__cost" data-role="analysis-cost" hidden></p>
               </div>
 
               <embed id="report-preview" data-role="report-preview" type="application/pdf" hidden />
@@ -152,6 +150,9 @@
           <button type="button" id="download-markdown-button" data-role="download-markdown-button" data-i18n="downloadMarkdown" hidden>
             Scarica anche in Markdown
           </button>
+          <!-- Outside the analysis pane on purpose: that pane scrolls, and
+               anything past its fold is effectively invisible. -->
+          <span class="analysis__cost" data-role="analysis-cost" hidden></span>
         </div>
       </section>
 

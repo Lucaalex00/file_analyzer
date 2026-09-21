@@ -28,8 +28,17 @@ La durata è misurata **nell'endpoint**, non nell'analizzatore: ciò che conta
 è quanto ha aspettato l'utente, estrazione e generazione del PDF incluse, non
 la sola chiamata al modello.
 
-In pagina è una riga discreta in fondo al pannello di analisi, separata da un
-filetto, in carattere piccolo e colore attenuato: `2.363 token · 13,1 s`.
+In pagina è una riga discreta accanto ai pulsanti di download, in carattere
+piccolo e colore attenuato: `2.363 token · 13,1 s`.
+
+Il primo tentativo l'aveva messa in fondo al pannello dell'analisi, ed era
+sbagliato: quel pannello ha un proprio scorrimento, quindi sotto contesto,
+riassunto, spiegazione e cinque punti di attenzione la riga finiva centinaia
+di pixel oltre la sua piega — presente nel DOM e invisibile a chiunque. Il
+test e2e non se n'è accorto perché verificava `toBeVisible()`, che per
+Playwright significa soltanto "esiste e ha dimensioni". Ora verifica che
+l'elemento **non sia dentro** il pannello che scorre, che è la proprietà che
+si intendeva davvero.
 Quando il provider non riporta l'uso — modalità demo, o documento rifiutato —
 i token spariscono dalla riga e resta solo il tempo: dire "0 token" sarebbe
 un numero, e sbagliato. Riaprendo una voce di cronologia la riga non compare

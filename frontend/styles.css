@@ -776,17 +776,24 @@ button[type="submit"]:active {
 }
 
 /* A technical footnote, deliberately quiet: interesting to someone reading
-   the project, never competing with the analysis itself. */
+   the project, never competing with the analysis itself. Sits in the actions
+   row -- pushed to the far end -- rather than inside the analysis pane,
+   which scrolls. */
 .analysis__cost {
-  margin: 1.4rem 0 0;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.75rem;
+  margin-left: auto;
+  font-size: 0.78rem;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .analysis__cost[hidden] {
   display: none;
+}
+
+@media (max-width: 700px) {
+  .analysis__cost {
+    margin-left: 0;
+  }
 }
 
 .analysis__context {
