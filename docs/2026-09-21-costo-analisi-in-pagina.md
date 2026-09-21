@@ -39,6 +39,7 @@ test e2e non se n'è accorto perché verificava `toBeVisible()`, che per
 Playwright significa soltanto "esiste e ha dimensioni". Ora verifica che
 l'elemento **non sia dentro** il pannello che scorre, che è la proprietà che
 si intendeva davvero.
+
 Quando il provider non riporta l'uso — modalità demo, o documento rifiutato —
 i token spariscono dalla riga e resta solo il tempo: dire "0 token" sarebbe
 un numero, e sbagliato. Riaprendo una voce di cronologia la riga non compare
