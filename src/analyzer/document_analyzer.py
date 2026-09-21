@@ -69,7 +69,16 @@ class DocumentAnalyzer:
         self._deployment = deployment
         self._max_retries = max_retries
 
-    def analyze(self, raw_text: RawText, language: str = "it") -> AnalysisResult:
+    def analyze(
+        self, raw_text: RawText, language: str = "it", metrics: dict | None = None
+    ) -> AnalysisResult:
+        """Analyze the document. If `metrics` is given, token counts are
+        written into it.
+
+        The caller owns the dict, so nothing about this is shared between
+        concurrent requests -- which storing the last call's usage on the
+        analyzer (a cached singleton) would have been.
+        """
         last_error: Exception | None = None
         max_attempts = self._max_retries + 1
 
@@ -88,6 +97,10 @@ class DocumentAnalyzer:
                 content = completion.choices[0].message.content
                 result = AnalysisResult.model_validate_json(content)
                 ungrounded = _ground_quotes(result, raw_text.content)
+                usage = getattr(completion, "usage", None)
+                if metrics is not None:
+                    metrics["total_tokens"] = getattr(usage, "total_tokens", None)
+                    metrics["attempts"] = attempt + 1
                 log_ai_attempt(
                     "document_analyzer",
                     self._deployment,
@@ -95,7 +108,7 @@ class DocumentAnalyzer:
                     max_attempts,
                     started_at,
                     "success",
-                    usage=getattr(completion, "usage", None),
+                    usage=usage,
                     ungrounded_quotes=ungrounded,
                 )
                 return result

@@ -1,6 +1,7 @@
 import base64
 import logging
 import re
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 
@@ -216,6 +217,11 @@ async def analyze_review(
     extracted_text: str | None = Form(None),
     pipeline: DocumentAnalysisPipeline = Depends(get_pipeline),
 ) -> dict:
+    # Wall time is measured here, not in the analyzer: it's what the user
+    # actually waited for, extraction and PDF rendering included.
+    started_at = time.perf_counter()
+    metrics: dict = {}
+
     if extracted_text:
         # The frontend already extracted this text for the preview panel --
         # reuse it instead of re-running (potentially OCR-heavy) extraction.
@@ -223,6 +229,7 @@ async def analyze_review(
             text=extracted_text,
             filename=file.filename or "upload",
             language=language,
+            metrics=metrics,
         )
     else:
         settings = get_settings()
@@ -232,9 +239,16 @@ async def analyze_review(
             filename=file.filename or "upload",
             content_type=file.content_type,
             language=language,
+            metrics=metrics,
         )
 
     return {
+        "metrics": {
+            # None rather than 0 when the provider reports no usage (demo
+            # mode, or a refused document): a wrong number is worse than none.
+            "total_tokens": metrics.get("total_tokens"),
+            "duration_ms": round((time.perf_counter() - started_at) * 1000),
+        },
         "analysis": analysis.model_dump(),
         "pdf_base64": base64.b64encode(pdf_bytes).decode("ascii"),
     }

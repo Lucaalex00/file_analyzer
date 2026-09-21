@@ -25,6 +25,7 @@ const analysisPlaceholderEl = document.querySelector("[data-role=analysis-placeh
 const analysisSkeletonEl = document.querySelector("[data-role=analysis-skeleton]");
 const analysisContentEl = document.querySelector("[data-role=analysis-content]");
 const copyAnalysisButton = document.querySelector("[data-role=copy-analysis]");
+const analysisCostEl = document.querySelector("[data-role=analysis-cost]");
 const analysisContextEl = document.querySelector("[data-role=analysis-context]");
 const analysisSummaryEl = document.querySelector("[data-role=analysis-summary]");
 const analysisExplanationEl = document.querySelector("[data-role=analysis-explanation]");
@@ -412,6 +413,31 @@ function renderAnalysis(analysis) {
   setAnalysisState("ready");
 }
 
+// What the analysis actually cost. Tokens are absent in demo mode and when
+// the provider refused the document, so the line adapts rather than
+// reporting a zero that would be a wrong number.
+function renderAnalysisCost(metrics) {
+  if (!metrics) {
+    analysisCostEl.hidden = true;
+    return;
+  }
+
+  const language = languageSelect.value;
+  const seconds = (metrics.duration_ms / 1000).toFixed(1);
+  const parts = [FileAnalyzerI18n.translate(language, "costSeconds").replace("{n}", seconds)];
+  if (metrics.total_tokens) {
+    parts.unshift(
+      FileAnalyzerI18n.translate(language, "costTokens").replace(
+        "{n}",
+        metrics.total_tokens.toLocaleString(language),
+      ),
+    );
+  }
+
+  analysisCostEl.textContent = parts.join(" · ");
+  analysisCostEl.hidden = false;
+}
+
 async function downloadMarkdownReport(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -492,6 +518,7 @@ function setReportDownload(blob, filename) {
 // A history entry stores only the generated PDF -- no original file, no
 // analysis -- so the workspace shows that report on its own.
 function showStoredReport(blob, filename) {
+  renderAnalysisCost(null);
   workspaceEl.hidden = false;
   workspaceEl.classList.add("workspace--report-only");
   setReportDownload(blob, filename);
@@ -690,11 +717,12 @@ form.addEventListener("submit", async (event) => {
       return;
     }
 
-    const { analysis, pdf_base64: pdfBase64 } = await response.json();
+    const { analysis, pdf_base64: pdfBase64, metrics } = await response.json();
     const blob = base64ToBlob(pdfBase64, "application/pdf");
     const filename = FileAnalyzerFilename.reportFilenameFor(file.name);
     setReportDownload(blob, filename);
     renderAnalysis(analysis);
+    renderAnalysisCost(metrics);
     await addToHistory(file, blob, filename);
     lastAnalyzedFile = file;
     downloadMarkdownButton.hidden = false;

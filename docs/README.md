@@ -68,6 +68,7 @@ happened — not a polished changelog, the real working history. Start with
 - [2026-09-15 — Original document beside the report](2026-09-15-confronto-documento-report.md)
 - [2026-09-15 — The "book" workspace that fills in stage by stage](2026-09-15-workspace-immersivo.md)
 - [2026-09-16 — Readable in thirty seconds: examples, in-app docs, spend cap](2026-09-16-demo-per-chi-valuta.md)
+- [2026-09-21 — Showing what the analysis cost](2026-09-21-costo-analisi-in-pagina.md) — tokens and elapsed time, quietly, under the explanation
 
 ## Repo health
 

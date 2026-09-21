@@ -775,6 +775,20 @@ button[type="submit"]:active {
   margin-top: 0;
 }
 
+/* A technical footnote, deliberately quiet: interesting to someone reading
+   the project, never competing with the analysis itself. */
+.analysis__cost {
+  margin: 1.4rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.analysis__cost[hidden] {
+  display: none;
+}
+
 .analysis__context {
   display: inline-block;
   background: var(--bg);

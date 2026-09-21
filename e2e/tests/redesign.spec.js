@@ -256,6 +256,44 @@ test("one click on an example document runs the whole analysis", async ({ page }
   await expect(page.locator("a[data-role=download-link]")).toBeVisible();
 });
 
+test("shows what the analysis cost, and omits tokens when the provider reports none", async ({ page }) => {
+  const fakePdfBase64 = Buffer.from("%PDF-1.4 fake report content").toString("base64");
+  await page.route("**/analyze/review", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        analysis: {
+          detected_context: "work",
+          plain_explanation: "A short memo about a deadline.",
+          summary: "A memo reminding the team of a Friday deadline.",
+          red_flags: [],
+        },
+        pdf_base64: fakePdfBase64,
+        metrics: { total_tokens: 3438, duration_ms: 11400 },
+      }),
+    });
+  });
+  await page.goto("/");
+  await analyzeAFile(page);
+
+  const cost = page.locator("[data-role=analysis-cost]");
+  await expect(cost).toBeVisible();
+  await expect(cost).toContainText("3,438");
+  await expect(cost).toContainText("11.4");
+});
+
+test("the cost line stays hidden when the run reported no metrics", async ({ page }) => {
+  // Reopening a history entry has no run to report on.
+  await mockAnalyzeReview(page);
+  await page.goto("/");
+  await analyzeAFile(page);
+  await page.reload();
+  await page.locator("[data-role=history-reopen]").click();
+
+  await expect(page.locator("[data-role=analysis-cost]")).toBeHidden();
+});
+
 test("buttons built from server data are relabelled when the language changes", async ({ page }) => {
   await page.goto("/");
 

@@ -69,12 +69,52 @@ def test_analyze_review_uses_pre_extracted_text_when_provided_skipping_re_extrac
     )
 
     assert response.status_code == 200
-    fake_pipeline.run_with_analysis_from_text.assert_called_once_with(
-        text="Some lease text already extracted client-side",
-        filename="lease.txt",
-        language="it",
-    )
+    _, kwargs = fake_pipeline.run_with_analysis_from_text.call_args
+    assert kwargs["text"] == "Some lease text already extracted client-side"
+    assert kwargs["filename"] == "lease.txt"
+    assert kwargs["language"] == "it"
     fake_pipeline.run_with_analysis.assert_not_called()
+
+
+def test_analyze_review_reports_what_the_analysis_cost():
+    fake_analysis = AnalysisResult(
+        detected_context="legal", plain_explanation="e", summary="s", red_flags=[]
+    )
+
+    def fake_run(*args, metrics=None, **kwargs):
+        if metrics is not None:
+            metrics["total_tokens"] = 3438
+        return fake_analysis, b"%PDF-1.4"
+
+    fake_pipeline = MagicMock()
+    fake_pipeline.run_with_analysis.side_effect = fake_run
+    override_pipeline(fake_pipeline)
+
+    body = client.post(
+        "/analyze/review", files={"file": ("lease.txt", b"Some lease text", "text/plain")}
+    ).json()
+
+    assert body["metrics"]["total_tokens"] == 3438
+    # Wall time is measured here rather than in the analyzer: what a user
+    # waited for includes extraction and PDF rendering, not just the call.
+    assert body["metrics"]["duration_ms"] >= 0
+
+
+def test_analyze_review_omits_token_count_when_the_provider_reports_none():
+    # Demo mode answers without a usage object; claiming zero tokens would
+    # be a number, and a wrong one.
+    fake_analysis = AnalysisResult(
+        detected_context="legal", plain_explanation="e", summary="s", red_flags=[]
+    )
+    fake_pipeline = MagicMock()
+    fake_pipeline.run_with_analysis.return_value = (fake_analysis, b"%PDF-1.4")
+    override_pipeline(fake_pipeline)
+
+    body = client.post(
+        "/analyze/review", files={"file": ("lease.txt", b"Some lease text", "text/plain")}
+    ).json()
+
+    assert body["metrics"]["total_tokens"] is None
 
 
 def test_analyze_review_passes_through_the_requested_language():

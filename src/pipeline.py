@@ -124,24 +124,31 @@ class DocumentAnalysisPipeline:
         return pdf_bytes
 
     def run_with_analysis(
-        self, file_bytes: bytes, filename: str, content_type: str | None, language: str = "it"
+        self,
+        file_bytes: bytes,
+        filename: str,
+        content_type: str | None,
+        language: str = "it",
+        metrics: dict | None = None,
     ) -> tuple[AnalysisResult, bytes]:
         extractor = self._factory.get_extractor(filename, content_type)
         raw_text = extractor.extract(file_bytes, filename)
-        return self._analyze_raw_text(raw_text, language=language)
+        return self._analyze_raw_text(raw_text, language=language, metrics=metrics)
 
     def run_with_analysis_from_text(
-        self, text: str, filename: str, language: str = "it"
+        self, text: str, filename: str, language: str = "it", metrics: dict | None = None
     ) -> tuple[AnalysisResult, bytes]:
         """Same as run_with_analysis, but for text already extracted elsewhere
         (e.g. the frontend's preview call) -- skips extraction entirely so the
         document isn't re-OCR'd/re-parsed a second time."""
         raw_text = RawText(content=text, source_filename=filename)
-        return self._analyze_raw_text(raw_text, language=language)
+        return self._analyze_raw_text(raw_text, language=language, metrics=metrics)
 
-    def _analyze_raw_text(self, raw_text: RawText, language: str) -> tuple[AnalysisResult, bytes]:
+    def _analyze_raw_text(
+        self, raw_text: RawText, language: str, metrics: dict | None = None
+    ) -> tuple[AnalysisResult, bytes]:
         try:
-            analysis = self._analyzer.analyze(raw_text, language=language)
+            analysis = self._analyzer.analyze(raw_text, language=language, metrics=metrics)
         except AnalysisRefusedError:
             # A refusal is a verdict, not an outage: degrade to the
             # deterministic checks rather than hand back nothing. An ordinary
